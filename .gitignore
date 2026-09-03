@@ -1,6 +1,8 @@
 node_modules/
 backend/node_modules/
 frontend/node_modules/
+frontend/.angular/
+.pnpm-store/
 
 .env
 backend/.env
@@ -10,3 +12,9 @@ frontend/.env.*
 dist/
 build/
 *.log
+
+# Python virtual environments and interpreter cache
+.venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
