@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buildtrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: buildtrack
+      POSTGRES_PASSWORD: buildtrack
+      POSTGRES_DB: buildtrack_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - buildtrack_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buildtrack -d buildtrack_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: buildtrack-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://buildtrack:buildtrack@postgres:5432/buildtrack_db
+      SECRET_KEY: replace_with_secure_secret_key
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: "30"
+      FRONTEND_URL: http://localhost:4200
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             python seed_demo.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: buildtrack-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+
+volumes:
+  buildtrack_postgres_data:

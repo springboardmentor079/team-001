@@ -1,0 +1,20 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Site Engineer Dashboard</h1>
+  <p class="bt-text-muted">A snapshot of active sites and pending work.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading dashboard..."></app-loading>
+
+  <ng-container *ngIf="!isLoading() && data() as d">
+    <div class="bt-stats-grid">
+      <app-stat-card label="Assigned Projects" [value]="d.assigned_projects" icon="apartment" accentColor="primary"></app-stat-card>
+      <app-stat-card label="Pending Site Activities" [value]="d.pending_site_activities" icon="pending_actions" accentColor="warning"></app-stat-card>
+      <app-stat-card label="Pending Tasks" [value]="d.pending_tasks" icon="checklist" accentColor="accent"></app-stat-card>
+      <app-stat-card label="Progress Overview" [value]="d.progress_overview_percentage + '%'" icon="trending_up" accentColor="success"></app-stat-card>
+    </div>
+    <div class="bt-card bt-note">
+      <p class="bt-text-muted">
+        Detailed site-activity logging and task tracking arrive with the site-progress module in a future milestone.
+      </p>
+    </div>
+  </ng-container>
+</div>

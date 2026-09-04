@@ -1,0 +1,78 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">User Management</h1>
+  <p class="bt-text-muted">View, search, and manage all BuildTrack accounts. ({{ total() }} total)</p>
+
+  <div class="bt-card bt-filters" [formGroup]="filterForm">
+    <mat-form-field appearance="outline" class="bt-filters__search">
+      <mat-label>Search by name or email</mat-label>
+      <input matInput formControlName="search" placeholder="e.g. Priya or manager@buildtrack.com" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="bt-filters__role">
+      <mat-label>Filter by role</mat-label>
+      <mat-select formControlName="role">
+        <mat-option value="">All roles</mat-option>
+        <mat-option *ngFor="let role of roles" [value]="role">{{ roleLabels[role] }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <app-loading *ngIf="isLoading()" message="Loading users..."></app-loading>
+
+  <div class="bt-card bt-table-card" *ngIf="!isLoading()">
+    <table mat-table [dataSource]="users()" class="bt-full-width" *ngIf="users().length; else noResults">
+      <ng-container matColumnDef="full_name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let u">{{ u.full_name }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>Email</th>
+        <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef>Role</th>
+        <td mat-cell *matCellDef="let u">
+          <mat-chip disableRipple>{{ u.role }}</mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="phone_number">
+        <th mat-header-cell *matHeaderCellDef>Phone</th>
+        <td mat-cell *matCellDef="let u">{{ u.phone_number || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="is_active">
+        <th mat-header-cell *matHeaderCellDef>Active</th>
+        <td mat-cell *matCellDef="let u">
+          <mat-slide-toggle
+            [checked]="u.is_active"
+            color="primary"
+            (change)="onToggleActive(u, $event)"
+          ></mat-slide-toggle>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="created_at">
+        <th mat-header-cell *matHeaderCellDef>Joined</th>
+        <td mat-cell *matCellDef="let u">{{ u.created_at | date: 'mediumDate' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let u">
+          <mat-chip *ngIf="!u.is_verified" color="accent" disableRipple>Unverified</mat-chip>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+
+    <ng-template #noResults>
+      <p class="bt-text-muted bt-empty">No users match your filters.</p>
+    </ng-template>
+  </div>
+</div>

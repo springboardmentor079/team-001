@@ -1,0 +1,20 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Client Dashboard</h1>
+  <p class="bt-text-muted">Track the status of your project(s).</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading dashboard..."></app-loading>
+
+  <ng-container *ngIf="!isLoading() && data() as d">
+    <div class="bt-stats-grid">
+      <app-stat-card label="My Projects" [value]="d.my_projects" icon="apartment" accentColor="primary"></app-stat-card>
+      <app-stat-card label="Average Progress" [value]="d.progress_percentage + '%'" icon="trending_up" accentColor="success"></app-stat-card>
+    </div>
+
+    <div class="bt-card bt-statuses" *ngIf="d.project_statuses.length">
+      <h2 class="bt-section-title">Project Status</h2>
+      <mat-chip-set>
+        <mat-chip *ngFor="let status of d.project_statuses">{{ status }}</mat-chip>
+      </mat-chip-set>
+    </div>
+  </ng-container>
+</div>
