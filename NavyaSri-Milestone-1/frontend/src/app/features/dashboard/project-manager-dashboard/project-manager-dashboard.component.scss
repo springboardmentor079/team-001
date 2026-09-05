@@ -1,0 +1,12 @@
+.bt-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin: 20px 0 28px;
+}
+
+.bt-progress-card {
+  padding: 24px;
+
+  &__caption { margin-top: 10px; font-size: 0.85rem; }
+}

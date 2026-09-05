@@ -1,0 +1,37 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Projects</h1>
+  <p class="bt-text-muted">Projects visible to your role. Full project management arrives in a future milestone.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading projects..."></app-loading>
+
+  <div class="bt-project-grid" *ngIf="!isLoading()">
+    <div class="bt-card bt-project-card" *ngFor="let p of projects()">
+      <div class="bt-project-card__header">
+        <h3>{{ p.project_name }}</h3>
+        <mat-chip [color]="statusColor(p.status)" selected disableRipple>{{ p.status.replace('_', ' ') }}</mat-chip>
+      </div>
+      <p class="bt-project-card__code">{{ p.project_code }}</p>
+
+      <div class="bt-project-card__row">
+        <mat-icon>category</mat-icon>
+        <span>{{ p.category }}</span>
+      </div>
+      <div class="bt-project-card__row" *ngIf="p.location">
+        <mat-icon>place</mat-icon>
+        <span>{{ p.location }}</span>
+      </div>
+      <div class="bt-project-card__row" *ngIf="p.budget">
+        <mat-icon>payments</mat-icon>
+        <span>{{ p.budget | number: '1.0-0' }}</span>
+      </div>
+      <div class="bt-project-card__row" *ngIf="p.start_date">
+        <mat-icon>event</mat-icon>
+        <span>{{ p.start_date | date: 'mediumDate' }} &ndash; {{ p.expected_end_date ? (p.expected_end_date | date: 'mediumDate') : 'TBD' }}</span>
+      </div>
+    </div>
+
+    <div class="bt-card bt-empty" *ngIf="!projects().length">
+      <p class="bt-text-muted">No projects to display yet.</p>
+    </div>
+  </div>
+</div>

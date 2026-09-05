@@ -1,0 +1,87 @@
+<div class="bt-auth-shell">
+  <div class="bt-auth-card bt-card">
+    <div class="bt-auth-card__brand">
+      <span class="bt-auth-card__logo">🏗️</span>
+      <h1>BuildTrack</h1>
+      <p class="bt-text-muted">Create your account</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="bt-auth-card__form" novalidate>
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Full Name</mat-label>
+        <input matInput formControlName="fullName" autocomplete="name" placeholder="Jane Doe" />
+        <mat-icon matSuffix>badge</mat-icon>
+        <mat-error *ngIf="f.fullName.hasError('required')">Full name is required</mat-error>
+        <mat-error *ngIf="f.fullName.hasError('minlength')">Full name is too short</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email" autocomplete="email" placeholder="you@company.com" />
+        <mat-icon matSuffix>mail</mat-icon>
+        <mat-error *ngIf="f.email.hasError('required')">Email is required</mat-error>
+        <mat-error *ngIf="f.email.hasError('email')">Enter a valid email address</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Phone Number</mat-label>
+        <input matInput formControlName="phoneNumber" autocomplete="tel" placeholder="+1 555 000 0000" />
+        <mat-icon matSuffix>phone</mat-icon>
+        <mat-error *ngIf="f.phoneNumber.hasError('pattern')">Enter a valid phone number</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Role</mat-label>
+        <mat-select formControlName="role">
+          <mat-option *ngFor="let role of roles" [value]="role">{{ roleLabels[role] }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="f.role.hasError('required')">Please select a role</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Password</mat-label>
+        <input matInput [type]="hidePassword() ? 'password' : 'text'" formControlName="password" autocomplete="new-password" />
+        <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()">
+          <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error *ngIf="f.password.hasError('required')">Password is required</mat-error>
+        <mat-error *ngIf="f.password.hasError('minlength')">Password must be at least 8 characters</mat-error>
+        <mat-error *ngIf="f.password.hasError('weakPassword')">
+          Must include an uppercase letter, a lowercase letter, and a digit
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bt-full-width">
+        <mat-label>Confirm Password</mat-label>
+        <input
+          matInput
+          [type]="hideConfirmPassword() ? 'password' : 'text'"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+        />
+        <button mat-icon-button matSuffix type="button" (click)="toggleConfirmPasswordVisibility()">
+          <mat-icon>{{ hideConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error *ngIf="f.confirmPassword.hasError('required')">Please confirm your password</mat-error>
+      </mat-form-field>
+      <p class="bt-auth-card__field-error" *ngIf="form.hasError('passwordMismatch') && f.confirmPassword.touched">
+        <mat-icon>error_outline</mat-icon> Passwords do not match
+      </p>
+
+      <div class="bt-auth-card__error" *ngIf="errorMessage()">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <button mat-raised-button color="primary" class="bt-full-width bt-auth-card__submit" type="submit" [disabled]="isLoading()">
+        <mat-spinner *ngIf="isLoading()" diameter="20" class="bt-auth-card__spinner"></mat-spinner>
+        <span *ngIf="!isLoading()">Register</span>
+        <span *ngIf="isLoading()">Creating account...</span>
+      </button>
+    </form>
+
+    <p class="bt-auth-card__footer">
+      Already have an account? <a routerLink="/auth/login">Sign in</a>
+    </p>
+  </div>
+</div>

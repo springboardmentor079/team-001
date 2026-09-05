@@ -1,0 +1,19 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Contractor Dashboard</h1>
+  <p class="bt-text-muted">Your assigned work at a glance.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading dashboard..."></app-loading>
+
+  <ng-container *ngIf="!isLoading() && data() as d">
+    <div class="bt-stats-grid">
+      <app-stat-card label="Assigned Work" [value]="d.assigned_work" icon="work" accentColor="primary"></app-stat-card>
+      <app-stat-card label="Project Progress" [value]="d.project_progress_percentage + '%'" icon="trending_up" accentColor="success"></app-stat-card>
+      <app-stat-card label="Upcoming Deadlines" [value]="d.upcoming_deadlines" icon="event" accentColor="warning"></app-stat-card>
+    </div>
+    <div class="bt-card bt-note">
+      <p class="bt-text-muted">
+        Detailed work-order tracking and deadline management arrive with the workforce module in a future milestone.
+      </p>
+    </div>
+  </ng-container>
+</div>
