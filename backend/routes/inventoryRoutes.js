@@ -5,46 +5,46 @@ const router = express.Router();
 const verifyToken = require("../middleware/authMiddleware");
 
 const {
-    createResource,
-    getResources,
-    getResourceById,
-    updateResource,
-    deleteResource
-} = require("../controllers/resourceController");
+    createInventory,
+    getInventory,
+    getInventoryById,
+    updateInventory,
+    deleteInventory
+} = require("../controllers/inventoryController");
 
 
 router.post(
     "/",
     verifyToken,
-    createResource
+    createInventory
 );
 
 
 router.get(
     "/",
     verifyToken,
-    getResources
+    getInventory
 );
 
 
 router.get(
     "/:id",
     verifyToken,
-    getResourceById
+    getInventoryById
 );
 
 
 router.put(
     "/:id",
     verifyToken,
-    updateResource
+    updateInventory
 );
 
 
 router.delete(
     "/:id",
     verifyToken,
-    deleteResource
+    deleteInventory
 );
 
 
