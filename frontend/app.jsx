@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -49,6 +49,17 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('password123');
   const [loginRole, setLoginRole] = useState('Administrator');
   const [authError, setAuthError] = useState('');
+  const [showRegister, setShowRegister] = useState(false);
+const [registerName, setRegisterName] = useState('');
+const [registerEmail, setRegisterEmail] = useState('');
+const [registerPassword, setRegisterPassword] = useState('');
+const [registerError, setRegisterError] = useState('');
+  const [usersList, setUsersList] = useState([]);
+const [usersLoading, setUsersLoading] = useState(false);
+const [dashboardStats, setDashboardStats] = useState({
+  totalUsers: 0,
+  totalProjects: 0
+});
 
   // ================= 2. DASHBOARD & NAVIGATION =================
   const [activeView, setActiveView] = useState('dashboard');
@@ -60,6 +71,10 @@ export default function App() {
   // Modals
   const [showAddUser, setShowAddUser] = useState(false);
   const [showCreateProj, setShowCreateProj] = useState(false);
+  const [projectName, setProjectName] = useState('');
+const [projectLocation, setProjectLocation] = useState('');
+const [projectBudget, setProjectBudget] = useState('');
+const [projectError, setProjectError] = useState('');
 
   // ================= 3. RICH DATA FOR ALL PAGES =================
   // 10-Slot Dynamic Booking concept for Mentor
@@ -69,13 +84,7 @@ export default function App() {
   ]);
 
   // Projects Data
-  const [projectsList, setProjectsList] = useState([
-    { id: 'PRJ-101', name: 'Helix Commercial Tower', location: 'Metro Zone A', budget: '$4,200,000', progress: 74, status: 'On Track', manager: 'Marcus Vance' },
-    { id: 'PRJ-102', name: 'Riverfront Residences Phase 2', location: 'Riverside Blvd', budget: '$6,800,000', progress: 42, status: 'Delayed', manager: 'Elena Rostova' },
-    { id: 'PRJ-103', name: 'Greenfield Eco-Hospital', location: 'Sector 9 West', budget: '$12,500,000', progress: 18, status: 'At Risk', manager: 'David Miller' },
-    { id: 'PRJ-104', name: 'Silicon Valley Logistics Hub', location: 'Interstate Hub 4', budget: '$3,100,000', progress: 95, status: 'Completed', manager: 'Aisha Patel' },
-    { id: 'PRJ-105', name: 'Skyline Metro Station', location: 'Central Junction', budget: '$8,900,000', progress: 58, status: 'On Track', manager: 'James Chen' }
-  ]);
+ const [projectsList, setProjectsList] = useState([]);
 
   // Inventory Data
   const [inventoryList, setInventoryList] = useState([
@@ -113,28 +122,280 @@ export default function App() {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
+const handleRoleChange = async (userId, newRole) => {
+  const token = localStorage.getItem('buildtrack_token');
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (!loginEmail) {
-      setAuthError('Please enter an email.');
+  if (!token) {
+    showNotification('Please login again.');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/users/${userId}/role`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          role: newRole
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showNotification(data.message || 'Failed to update role.');
       return;
     }
-    const namePart = loginEmail.split('@')[0];
-    const cleanName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    setCurrentUser({
-      name: cleanName,
-      email: loginEmail,
-      role: loginRole,
-      initials: cleanName.substring(0, 2).toUpperCase()
+
+    setUsersList((prevUsers) =>
+      prevUsers.map((user) =>
+        user.id === userId
+          ? { ...user, role: newRole }
+          : user
+      )
+    );
+
+    showNotification('User role updated successfully!');
+  } catch (error) {
+    console.error(error);
+    showNotification('Cannot connect to BuildTrack backend.');
+  }
+};
+const handleRegister = async (e) => {
+  e.preventDefault();
+  setRegisterError('');
+
+  if (!registerName || !registerEmail || !registerPassword) {
+    setRegisterError('Please fill in all fields.');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      'http://localhost:5000/api/auth/register',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          full_name: registerName,
+          email: registerEmail,
+          password: registerPassword
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setRegisterError(data.message || 'Registration failed.');
+      return;
+    }
+
+    showNotification('Registration successful! Please login.');
+
+    setRegisterName('');
+    setRegisterEmail('');
+    setRegisterPassword('');
+    setShowRegister(false);
+
+  } catch (error) {
+    console.error(error);
+    setRegisterError('Cannot connect to BuildTrack backend.');
+  }
+};
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setAuthError('');
+
+  if (!loginEmail || !loginPassword) {
+    setAuthError('Please enter email and password.');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: loginEmail,
+        password: loginPassword
+      })
     });
-    showNotification(`Welcome back, ${cleanName}!`);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setAuthError(data.message || 'Login failed.');
+      return;
+    }
+
+    localStorage.setItem('buildtrack_token', data.token);
+    const token = data.token;
+
+try {
+  setUsersLoading(true);
+
+  const usersResponse = await fetch('http://localhost:5000/api/users/', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+ if (usersResponse.ok) {
+  const users = await usersResponse.json();
+
+  setUsersList(users);
+
+  setDashboardStats((prev) => ({
+    ...prev,
+    totalUsers: users.length
+  }));
+}
+} catch (error) {
+  console.error('Failed to load users:', error);
+} finally {
+  setUsersLoading(false);
+}
+
+    const name = data.user.full_name;
+    const roleMap = {
+      admin: 'Administrator',
+      project_manager: 'Project Manager',
+      site_engineer: 'Site Engineer',
+      contractor: 'Contractor',
+      worker: 'Worker',
+      client: 'Client'
+    };
+
+    setCurrentUser({
+      name,
+      email: data.user.email,
+      role: roleMap[data.user.role] || data.user.role,
+      initials: name
+        .split(' ')
+        .map(part => part[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase()
+    });
+
+    showNotification(`Welcome back, ${name}!`);
+
+  } catch (error) {
+    console.error(error);
+    setAuthError('Cannot connect to BuildTrack backend.');
+  }
+};
+useEffect(() => {
+  if (!currentUser) return;
+
+  const token = localStorage.getItem('buildtrack_token');
+
+  if (!token) return;
+
+  const loadProjects = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/projects', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch projects');
+      }
+
+      const projects = await response.json();
+
+      setProjectsList(projects);
+
+      setDashboardStats((prev) => ({
+        ...prev,
+        totalProjects: projects.length
+      }));
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    }
   };
+
+  loadProjects();
+}, [currentUser]);
 
   const handleQuickLogin = (name, email, role, initials) => {
     setCurrentUser({ name, email, role, initials });
     showNotification(`Logged in as ${name} (${role})`);
   };
+  const handleCreateProject = async () => {
+  setProjectError('');
+
+  if (!projectName || !projectLocation || !projectBudget) {
+    setProjectError('Please fill in all project fields.');
+    return;
+  }
+
+  const token = localStorage.getItem('buildtrack_token');
+
+  if (!token) {
+    setProjectError('Please login again.');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/projects', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        project_code: `PRJ-${Date.now()}`,
+        name: projectName,
+        location: projectLocation,
+        budget: Number(projectBudget),
+        progress: 0,
+        status: 'On Track',
+        manager: currentUser.name
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setProjectError(data.message || 'Failed to create project.');
+      return;
+    }
+
+    setProjectsList((prevProjects) => [
+      data.project,
+      ...prevProjects
+    ]);
+
+    setDashboardStats((prev) => ({
+      ...prev,
+      totalProjects: prev.totalProjects + 1
+    }));
+
+    setProjectName('');
+    setProjectLocation('');
+    setProjectBudget('');
+    setShowCreateProj(false);
+
+    showNotification('Project created successfully!');
+  } catch (error) {
+    console.error(error);
+    setProjectError('Cannot connect to BuildTrack backend.');
+  }
+};
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -181,11 +442,12 @@ export default function App() {
       ]
     },
     {
-      title: 'SYSTEM',
-      items: [
-        { id: 'settings', label: 'Settings', icon: Settings }
-      ]
-    }
+  title: 'SYSTEM',
+  items: [
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ]
+}
   ];
 
   // =========================================================================
@@ -277,8 +539,84 @@ export default function App() {
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>
+            {showRegister && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
 
-            <div className="border-t border-slate-100 pt-4">
+      <div className="flex justify-between items-center border-b pb-2">
+        <div>
+          <h3 className="font-bold text-sm">Create BuildTrack Account</h3>
+          <p className="text-[10px] text-slate-400 mt-1">
+            New accounts are registered as Client
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowRegister(false)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {registerError && (
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+          {registerError}
+        </div>
+      )}
+
+      <form onSubmit={handleRegister} className="space-y-3">
+
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={registerName}
+          onChange={(e) => setRegisterName(e.target.value)}
+          className="w-full border p-2 text-xs rounded-xl"
+        />
+
+        <input
+          type="email"
+          placeholder="Email Address"
+          value={registerEmail}
+          onChange={(e) => setRegisterEmail(e.target.value)}
+          className="w-full border p-2 text-xs rounded-xl"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={registerPassword}
+          onChange={(e) => setRegisterPassword(e.target.value)}
+          className="w-full border p-2 text-xs rounded-xl"
+        />
+
+        <button
+          type="submit"
+          className="w-full bg-amber-600 text-white text-xs font-bold py-2 rounded-xl hover:bg-amber-700"
+        >
+          Create Account
+        </button>
+
+      </form>
+    </div>
+  </div>
+)}
+
+<div className="text-center py-2">
+  <button
+    type="button"
+    onClick={() => {
+      setShowRegister(true);
+      setRegisterError('');
+    }}
+    className="text-xs font-bold text-amber-700 hover:underline"
+  >
+    Don't have an account? Register
+  </button>
+</div>
+
+<div className="border-t border-slate-100 pt-4">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2.5">
                 Quick 1-Click Login
               </p>
@@ -462,6 +800,86 @@ export default function App() {
         {/* MAIN DISPLAY AREA: FULL PAGES */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F8FAFC]">
           <div className="mx-auto max-w-7xl space-y-6">
+          {/* ================= PAGE: USERS ================= */}
+{activeView === 'users' && currentUser.role === 'Administrator' && (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">
+          User Management
+        </h2>
+        <p className="text-xs text-slate-500">
+          Manage users and assign system roles
+        </p>
+      </div>
+    </div>
+
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+      {usersLoading ? (
+        <div className="p-6 text-sm text-slate-500">
+          Loading users...
+        </div>
+      ) : usersList.length === 0 ? (
+        <div className="p-6 text-sm text-slate-500">
+          No users found.
+        </div>
+      ) : (
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase">
+            <tr>
+              <th className="p-3">ID</th>
+              <th className="p-3">Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Role</th>
+              <th className="p-3">Status</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {usersList.map((user) => (
+              <tr key={user.id} className="hover:bg-slate-50">
+                <td className="p-3 font-bold text-slate-500">
+                  {user.id}
+                </td>
+
+                <td className="p-3 font-bold text-slate-900">
+                  {user.full_name}
+                </td>
+
+                <td className="p-3 text-slate-500">
+                  {user.email}
+                </td>
+
+                <td className="p-3">
+  <select
+    value={user.role}
+    onChange={(e) =>
+      handleRoleChange(user.id, e.target.value)
+    }
+    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white"
+  >
+    <option value="admin">Administrator</option>
+    <option value="project_manager">Project Manager</option>
+    <option value="site_engineer">Site Engineer</option>
+    <option value="contractor">Contractor</option>
+    <option value="worker">Worker</option>
+    <option value="client">Client</option>
+  </select>
+</td>
+
+                <td className="p-3">
+                  <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </div>
+)}
 
             {/* ================= PAGE 1: DASHBOARD ================= */}
             {activeView === 'dashboard' && (
@@ -495,7 +913,7 @@ export default function App() {
                       <span className="text-[11px] font-bold uppercase text-slate-500">TOTAL USERS</span>
                       <Users className="h-4 w-4 text-indigo-600" />
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 mt-2">{isZeroData ? 0 : 256}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-2">{isZeroData ? 0 : dashboardStats.totalUsers}</p>
                     <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
                       <ArrowUpRight className="h-3.5 w-3.5" /> 17% from last month
                     </p>
@@ -506,7 +924,7 @@ export default function App() {
                       <span className="text-[11px] font-bold uppercase text-slate-500">TOTAL PROJECTS</span>
                       <FolderKanban className="h-4 w-4 text-sky-600" />
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 mt-2">{isZeroData ? 0 : 48}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-2">{isZeroData ? 0 : dashboardStats.totalProjects}</p>
                     <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
                       <ArrowUpRight className="h-3.5 w-3.5" /> 8% from last month
                     </p>
@@ -967,6 +1385,70 @@ export default function App() {
         </main>
       </div>
 
+{/* Modal: Register User */}
+{showRegister && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+
+      <div className="flex justify-between items-center border-b pb-2">
+        <div>
+          <h3 className="font-bold text-sm">Create BuildTrack Account</h3>
+          <p className="text-[10px] text-slate-400 mt-1">
+            New accounts are registered as Client
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowRegister(false)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {registerError && (
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+          {registerError}
+        </div>
+      )}
+
+      <form onSubmit={handleRegister} className="space-y-3">
+
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={registerName}
+          onChange={(e) => setRegisterName(e.target.value)}
+          className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+        />
+
+        <input
+          type="email"
+          placeholder="Email Address"
+          value={registerEmail}
+          onChange={(e) => setRegisterEmail(e.target.value)}
+        className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={registerPassword}
+          onChange={(e) => setRegisterPassword(e.target.value)}
+         className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+        />
+
+        <button
+          type="submit"
+          className="w-full bg-amber-600 text-white text-xs font-bold py-2 rounded-xl hover:bg-amber-700"
+        >
+          Create Account
+        </button>
+
+      </form>
+    </div>
+  </div>
+)}
       {/* Modal: Add User */}
       {showAddUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
@@ -998,18 +1480,39 @@ export default function App() {
               <h3 className="font-bold text-sm">Initialize New Project</h3>
               <button onClick={() => setShowCreateProj(false)}><X className="h-4 w-4" /></button>
             </div>
-            <input type="text" placeholder="Project Name (e.g. Sapphire Towers)" className="w-full border p-2 text-xs rounded-xl" />
-            <input type="text" placeholder="Location" className="w-full border p-2 text-xs rounded-xl" />
-            <input type="text" placeholder="Total Budget ($)" className="w-full border p-2 text-xs rounded-xl" />
-            <button
-              onClick={() => {
-                setShowCreateProj(false);
-                showNotification('Project initialized in database!');
-              }}
-              className="w-full bg-emerald-600 text-white text-xs font-bold py-2 rounded-xl"
-            >
-              Launch Project
-            </button>
+            {projectError && (
+  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+    {projectError}
+  </div>
+)}
+            <input
+  type="text"
+  placeholder="Project Name (e.g. Sapphire Towers)"
+  value={projectName}
+  onChange={(e) => setProjectName(e.target.value)}
+  className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+/>
+
+<input
+  type="text"
+  placeholder="Location"
+  value={projectLocation}
+  onChange={(e) => setProjectLocation(e.target.value)}
+  className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+/>
+
+<input
+  type="number"
+  placeholder="Total Budget ($)"
+  value={projectBudget}
+  onChange={(e) => setProjectBudget(e.target.value)}
+  className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+/>  <button
+  onClick={handleCreateProject}
+  className="w-full bg-emerald-600 text-white text-xs font-bold py-2 rounded-xl"
+>
+  Launch Project
+</button>
           </div>
         </div>
       )}

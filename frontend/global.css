@@ -9,3 +9,15 @@ body {
   margin: 0;
   padding: 0;
 }
+input,
+select,
+textarea {
+  color: #0f172a !important;
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
