@@ -5,26 +5,30 @@ const createProject = async (req, res) => {
         const {
             name,
             description,
+            category,
             location,
-            status,
             start_date,
-            end_date
+            end_date,
+            budget,
+            status
         } = req.body;
 
         const manager_id = req.user.id;
 
         const result = await db.query(
             `INSERT INTO projects
-            (name, description, location, status, start_date, end_date, manager_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (name, description, category, location, start_date, end_date, budget, status, manager_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *`,
             [
                 name,
                 description,
+                category,
                 location,
-                status,
                 start_date,
                 end_date,
+                budget,
+                status,
                 manager_id
             ]
         );
@@ -35,10 +39,11 @@ const createProject = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("CREATE PROJECT ERROR:", error);
 
         res.status(500).json({
-            message: "Error creating project"
+            message: "Error creating project",
+            error: error.message
         });
     }
 };
@@ -53,10 +58,11 @@ const getProjects = async (req, res) => {
         res.status(200).json(result.rows);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET PROJECTS ERROR:", error);
 
         res.status(500).json({
-            message: "Error fetching projects"
+            message: "Error fetching projects",
+            error: error.message
         });
     }
 };
@@ -80,10 +86,11 @@ const getProjectById = async (req, res) => {
         res.status(200).json(result.rows[0]);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET PROJECT ERROR:", error);
 
         res.status(500).json({
-            message: "Error fetching project"
+            message: "Error fetching project",
+            error: error.message
         });
     }
 };
@@ -96,29 +103,35 @@ const updateProject = async (req, res) => {
         const {
             name,
             description,
+            category,
             location,
-            status,
             start_date,
-            end_date
+            end_date,
+            budget,
+            status
         } = req.body;
 
         const result = await db.query(
             `UPDATE projects
              SET name = $1,
                  description = $2,
-                 location = $3,
-                 status = $4,
+                 category = $3,
+                 location = $4,
                  start_date = $5,
-                 end_date = $6
-             WHERE id = $7
+                 end_date = $6,
+                 budget = $7,
+                 status = $8
+             WHERE id = $9
              RETURNING *`,
             [
                 name,
                 description,
+                category,
                 location,
-                status,
                 start_date,
                 end_date,
+                budget,
+                status,
                 id
             ]
         );
@@ -135,10 +148,11 @@ const updateProject = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("UPDATE PROJECT ERROR:", error);
 
         res.status(500).json({
-            message: "Error updating project"
+            message: "Error updating project",
+            error: error.message
         });
     }
 };
@@ -165,10 +179,11 @@ const deleteProject = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("DELETE PROJECT ERROR:", error);
 
         res.status(500).json({
-            message: "Error deleting project"
+            message: "Error deleting project",
+            error: error.message
         });
     }
 };

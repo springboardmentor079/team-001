@@ -15,7 +15,7 @@ const signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            `INSERT INTO users (name, email, password, role)
+            `INSERT INTO users (name, email, password_hash, role)
              VALUES ($1, $2, $3, $4)
              RETURNING id, name, email, role`,
             [name, email, hashedPassword, role]
@@ -27,12 +27,16 @@ const signup = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Signup failed",
             error: error.message
         });
     }
 };
+
+
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -58,7 +62,7 @@ const login = async (req, res) => {
 
         const passwordMatch = await bcrypt.compare(
             password,
-            user.password
+            user.password_hash
         );
 
         if (!passwordMatch) {
@@ -67,33 +71,40 @@ const login = async (req, res) => {
             });
         }
 
-       const token = jwt.sign(
-    {
-        id: user.id,
-        role: user.role
-    },
-    process.env.JWT_SECRET,
-    {
-        expiresIn: "1h"
-    }
-);
+        const token = jwt.sign(
+            {
+                id: user.id,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1h"
+            }
+        );
 
-res.json({
-    message: "Login successful",
-    token: token,
-    user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-    }
-});
+        res.json({
+            message: "Login successful",
+            token: token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Login failed",
             error: error.message
         });
     }
 };
-module.exports = { signup ,login};
+
+
+module.exports = {
+    signup,
+    login
+};

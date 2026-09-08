@@ -4,26 +4,27 @@ const createProgress = async (req, res) => {
     try {
         const {
             project_id,
+            name,
             description,
-            progress_percentage,
+            due_date,
+            completed_date,
             status,
-            remarks
+            completion_pct
         } = req.body;
-
-        const reported_by = req.user.id;
 
         const result = await db.query(
             `INSERT INTO project_milestones
-            (project_id, description, progress_percentage, status, remarks, reported_by)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            (project_id, name, description, due_date, completed_date, status, completion_pct)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *`,
             [
                 project_id,
+                name,
                 description,
-                progress_percentage,
+                due_date,
+                completed_date,
                 status,
-                remarks,
-                reported_by
+                completion_pct
             ]
         );
 
@@ -33,10 +34,11 @@ const createProgress = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("CREATE PROGRESS ERROR:", error);
 
         res.status(500).json({
-            message: "Error creating progress"
+            message: "Error creating progress",
+            error: error.message
         });
     }
 };
@@ -51,10 +53,11 @@ const getProgress = async (req, res) => {
         res.status(200).json(result.rows);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET PROGRESS ERROR:", error);
 
         res.status(500).json({
-            message: "Error fetching progress"
+            message: "Error fetching progress",
+            error: error.message
         });
     }
 };
@@ -78,10 +81,11 @@ const getProgressById = async (req, res) => {
         res.status(200).json(result.rows[0]);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET PROGRESS ERROR:", error);
 
         res.status(500).json({
-            message: "Error fetching progress"
+            message: "Error fetching progress",
+            error: error.message
         });
     }
 };
@@ -93,27 +97,33 @@ const updateProgress = async (req, res) => {
 
         const {
             project_id,
+            name,
             description,
-            progress_percentage,
+            due_date,
+            completed_date,
             status,
-            remarks
+            completion_pct
         } = req.body;
 
         const result = await db.query(
             `UPDATE project_milestones
              SET project_id = $1,
-                 description = $2,
-                 progress_percentage = $3,
-                 status = $4,
-                 remarks = $5
-             WHERE id = $6
+                 name = $2,
+                 description = $3,
+                 due_date = $4,
+                 completed_date = $5,
+                 status = $6,
+                 completion_pct = $7
+             WHERE id = $8
              RETURNING *`,
             [
                 project_id,
+                name,
                 description,
-                progress_percentage,
+                due_date,
+                completed_date,
                 status,
-                remarks,
+                completion_pct,
                 id
             ]
         );
@@ -130,10 +140,11 @@ const updateProgress = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("UPDATE PROGRESS ERROR:", error);
 
         res.status(500).json({
-            message: "Error updating progress"
+            message: "Error updating progress",
+            error: error.message
         });
     }
 };
@@ -160,10 +171,11 @@ const deleteProgress = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("DELETE PROGRESS ERROR:", error);
 
         res.status(500).json({
-            message: "Error deleting progress"
+            message: "Error deleting progress",
+            error: error.message
         });
     }
 };
