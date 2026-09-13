@@ -1,0 +1,36 @@
+<mat-toolbar class="bt-navbar">
+  <button mat-icon-button class="bt-navbar__menu-btn" (click)="toggleSidenav.emit()" aria-label="Toggle navigation">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <a routerLink="/" class="bt-navbar__brand">
+    <mat-icon class="bt-navbar__brand-icon">engineering</mat-icon>
+    <span class="bt-navbar__brand-text">BuildTrack</span>
+  </a>
+
+  <span class="bt-navbar__spacer"></span>
+
+  <button mat-icon-button matTooltip="Notifications" aria-label="Notifications">
+    <mat-icon matBadge="0" matBadgeSize="small" matBadgeColor="accent" [matBadgeHidden]="true">notifications</mat-icon>
+  </button>
+
+  <button mat-button class="bt-navbar__user" [matMenuTriggerFor]="userMenu" *ngIf="user">
+    <span class="bt-navbar__avatar">{{ initials }}</span>
+    <span class="bt-navbar__user-info">
+      <span class="bt-navbar__user-name">{{ user.full_name }}</span>
+      <span class="bt-navbar__user-role">{{ roleLabels[user.role] }}</span>
+    </span>
+    <mat-icon>arrow_drop_down</mat-icon>
+  </button>
+
+  <mat-menu #userMenu="matMenu">
+    <a mat-menu-item routerLink="/profile">
+      <mat-icon>person</mat-icon>
+      <span>My Profile</span>
+    </a>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Logout</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>

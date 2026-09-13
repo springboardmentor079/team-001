@@ -1,0 +1,21 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Project Manager Dashboard</h1>
+  <p class="bt-text-muted">Overview of the projects you manage.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading dashboard..."></app-loading>
+
+  <ng-container *ngIf="!isLoading() && data() as d">
+    <div class="bt-stats-grid">
+      <app-stat-card label="Assigned Projects" [value]="d.assigned_projects" icon="apartment" accentColor="primary"></app-stat-card>
+      <app-stat-card label="Active Projects" [value]="d.active_projects" icon="engineering" accentColor="accent"></app-stat-card>
+      <app-stat-card label="Upcoming Milestones" [value]="d.upcoming_milestones" icon="flag" accentColor="warning"></app-stat-card>
+      <app-stat-card label="Overall Progress" [value]="d.overall_progress_percentage + '%'" icon="trending_up" accentColor="success"></app-stat-card>
+    </div>
+
+    <div class="bt-card bt-progress-card">
+      <h2 class="bt-section-title">Overall Project Progress</h2>
+      <mat-progress-bar mode="determinate" [value]="d.overall_progress_percentage" color="primary"></mat-progress-bar>
+      <p class="bt-text-muted bt-progress-card__caption">{{ d.overall_progress_percentage }}% average milestone completion across your projects</p>
+    </div>
+  </ng-container>
+</div>

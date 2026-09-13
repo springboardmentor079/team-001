@@ -1,0 +1,20 @@
+<div class="bt-sidebar">
+  <div class="bt-sidebar__section-label">Main Menu</div>
+  <mat-nav-list class="bt-sidebar__list">
+    <a
+      mat-list-item
+      *ngFor="let item of navItems"
+      [routerLink]="item.route"
+      routerLinkActive="bt-sidebar__link--active"
+      class="bt-sidebar__link"
+    >
+      <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+      <span matListItemTitle>{{ item.label }}</span>
+    </a>
+  </mat-nav-list>
+  <mat-divider></mat-divider>
+  <div class="bt-sidebar__footer">
+    <p>BuildTrack v1.0</p>
+    <p>Milestone 1</p>
+  </div>
+</div>

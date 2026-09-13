@@ -1,0 +1,21 @@
+<div class="bt-shell">
+  <app-navbar
+    [user]="(auth.currentUser$ | async)"
+    (toggleSidenav)="sidenav.toggle()"
+  ></app-navbar>
+
+  <mat-sidenav-container class="bt-shell__container" [hasBackdrop]="(isHandset$ | async) ?? false">
+    <mat-sidenav
+      #sidenav
+      class="bt-shell__sidenav"
+      [mode]="(isHandset$ | async) ? 'over' : 'side'"
+      [opened]="!(isHandset$ | async)"
+    >
+      <app-sidebar [role]="(auth.currentUser$ | async)?.role ?? null"></app-sidebar>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="bt-shell__content">
+      <router-outlet></router-outlet>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

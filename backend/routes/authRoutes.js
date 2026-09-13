@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -112,5 +113,14 @@ router.post('/login', async (req, res) => {
     });
   }
 });
+=======
+const express = require("express");
+const { signup, login } = require("../controllers/authController");
+
+const router = express.Router();
+
+router.post("/signup", signup);
+router.post("/login", login);
+>>>>>>> 6bf68f18a687edf69dcc4961d4e969ea7d9aaa5b
 
 module.exports = router;

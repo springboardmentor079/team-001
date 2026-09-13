@@ -1,0 +1,73 @@
+/* Global application styles.
+   Design language: clean, corporate, construction/engineering inspired.
+   Primary: deep blue | Neutral: dark gray / white | Accent: subtle orange */
+
+:root {
+  --bt-primary: #1a3a5c;
+  --bt-primary-light: #2c5480;
+  --bt-primary-dark: #0f253d;
+  --bt-accent: #e8792f;
+  --bt-accent-light: #f4a35f;
+  --bt-bg: #f4f6f8;
+  --bt-surface: #ffffff;
+  --bt-text: #1f2937;
+  --bt-text-muted: #6b7280;
+  --bt-border: #e2e6ea;
+  --bt-success: #2e7d32;
+  --bt-warning: #ed6c02;
+  --bt-danger: #c62828;
+  --bt-radius: 10px;
+  --bt-shadow: 0 2px 10px rgba(15, 37, 61, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bt-bg);
+  color: var(--bt-text);
+  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+}
+
+a { color: var(--bt-primary); text-decoration: none; }
+a:hover { color: var(--bt-accent); }
+
+.bt-card {
+  background: var(--bt-surface);
+  border-radius: var(--bt-radius);
+  box-shadow: var(--bt-shadow);
+  border: 1px solid var(--bt-border);
+}
+
+.bt-page-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.bt-section-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--bt-primary);
+  margin-bottom: 16px;
+}
+
+.bt-full-width { width: 100%; }
+
+.bt-text-muted { color: var(--bt-text-muted); }
+
+.bt-auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, var(--bt-primary-dark) 0%, var(--bt-primary) 100%);
+}
+
+/* Snackbar / toast tone helpers used across the app */
+.bt-snack-success { --mdc-snackbar-container-color: #2e7d32; }
+.bt-snack-error { --mdc-snackbar-container-color: #c62828; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #c7ccd1; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }

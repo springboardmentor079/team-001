@@ -1,0 +1,28 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">Worker Dashboard</h1>
+  <p class="bt-text-muted">Your assignment and today's status.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading dashboard..."></app-loading>
+
+  <ng-container *ngIf="!isLoading() && data() as d">
+    <div class="bt-worker-grid">
+      <div class="bt-card bt-worker-tile">
+        <span class="bt-worker-tile__label">Assigned Project</span>
+        <span class="bt-worker-tile__value">{{ d.assigned_project ?? 'Not yet assigned' }}</span>
+      </div>
+      <div class="bt-card bt-worker-tile">
+        <span class="bt-worker-tile__label">Today's Status</span>
+        <span class="bt-worker-tile__value">{{ d.todays_status }}</span>
+      </div>
+      <div class="bt-card bt-worker-tile">
+        <span class="bt-worker-tile__label">Upcoming Work</span>
+        <span class="bt-worker-tile__value">{{ d.upcoming_work_items }} item(s)</span>
+      </div>
+    </div>
+    <div class="bt-card bt-note">
+      <p class="bt-text-muted">
+        Daily attendance check-in/out and detailed task assignment arrive with the workforce module in a future milestone.
+      </p>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,62 @@
+<div class="bt-page-container">
+  <h1 class="bt-section-title">My Profile</h1>
+  <p class="bt-text-muted">View and update your personal information.</p>
+
+  <app-loading *ngIf="isLoading()" message="Loading profile..."></app-loading>
+
+  <div class="bt-profile-layout" *ngIf="!isLoading() && profile() as p">
+    <div class="bt-card bt-profile-summary">
+      <div class="bt-profile-summary__avatar">{{ initials }}</div>
+      <h2>{{ p.full_name }}</h2>
+      <mat-chip disableRipple>{{ roleLabels[p.role] }}</mat-chip>
+      <div class="bt-profile-summary__meta">
+        <div><mat-icon>mail</mat-icon><span>{{ p.email }}</span></div>
+        <div *ngIf="p.phone_number"><mat-icon>phone</mat-icon><span>{{ p.phone_number }}</span></div>
+        <div><mat-icon>event</mat-icon><span>Joined {{ p.created_at | date: 'mediumDate' }}</span></div>
+        <div>
+          <mat-icon>{{ p.is_verified ? 'verified' : 'gpp_maybe' }}</mat-icon>
+          <span>{{ p.is_verified ? 'Verified account' : 'Not yet verified' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bt-card bt-profile-form">
+      <h2 class="bt-section-title">Edit Profile</h2>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <mat-form-field appearance="outline" class="bt-full-width">
+          <mat-label>Full Name</mat-label>
+          <input matInput formControlName="fullName" />
+          <mat-error *ngIf="f.fullName.hasError('required')">Full name is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bt-full-width">
+          <mat-label>Phone Number</mat-label>
+          <input matInput formControlName="phoneNumber" placeholder="+1 555 000 0000" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bt-full-width">
+          <mat-label>Profile Image URL</mat-label>
+          <input matInput formControlName="profileImage" placeholder="https://..." />
+          <mat-hint>Optional link to a hosted profile photo.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bt-full-width">
+          <mat-label>Email</mat-label>
+          <input matInput [value]="p.email" disabled />
+          <mat-hint>Email cannot be changed here.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bt-full-width">
+          <mat-label>Role</mat-label>
+          <input matInput [value]="roleLabels[p.role]" disabled />
+          <mat-hint>Only an Administrator can change your role.</mat-hint>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="isSaving()">
+          <mat-icon>save</mat-icon>
+          {{ isSaving() ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

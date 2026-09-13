@@ -1,0 +1,17 @@
+.bt-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px 4px;
+  margin-bottom: 20px;
+
+  &__search { flex: 2 1 280px; }
+  &__role { flex: 1 1 200px; }
+}
+
+.bt-table-card {
+  overflow-x: auto;
+  padding: 8px 8px 4px;
+}
+
+.bt-empty { text-align: center; padding: 32px; }

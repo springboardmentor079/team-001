@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const express = require('express');
 const db = require('../db');
 const authenticateToken = require('../middleware/authMiddleware');
@@ -80,5 +81,63 @@ router.post('/', authenticateToken, (req, res) => {
     });
   }
 });
+=======
+const express = require("express");
+
+const router = express.Router();
+
+const verifyToken = require("../middleware/authMiddleware");
+
+const allowRoles = require("../middleware/roleMiddleware");
+
+const {
+    createProject,
+    getProjects,
+    getProjectById,
+    updateProject,
+    deleteProject
+} = require("../controllers/projectController");
+
+
+router.post(
+    "/",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    createProject
+);
+
+
+router.get(
+    "/",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    getProjects
+);
+
+
+router.get(
+    "/:id",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    getProjectById
+);
+
+
+router.put(
+    "/:id",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    updateProject
+);
+
+
+router.delete(
+    "/:id",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    deleteProject
+);
+
+>>>>>>> 6bf68f18a687edf69dcc4961d4e969ea7d9aaa5b
 
 module.exports = router;

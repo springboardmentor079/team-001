@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const Database = require('better-sqlite3');
 
 const db = new Database('buildtrack.db');
@@ -29,3 +30,19 @@ db.exec(`
 `);
 
 module.exports = db;
+=======
+const { Pool } = require("pg");
+
+const pool = new Pool({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+module.exports = pool;
+>>>>>>> 6bf68f18a687edf69dcc4961d4e969ea7d9aaa5b
