@@ -1,42 +1,3 @@
-<<<<<<< HEAD
-const jwt = require('jsonwebtoken');
-
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      message: 'Access token required'
-    });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      message: 'Invalid authorization header'
-    });
-  }
-
-  try {
-    const decoded = jwt.verify(
-      token,
-     process.env.JWT_SECRET
-    );
-
-    req.user = decoded;
-
-    next();
-
-  } catch (error) {
-    return res.status(401).json({
-      message: 'Invalid or expired token'
-    });
-  }
-};
-
-module.exports = authenticateToken;
-=======
 const jwt = require("jsonwebtoken");
 
 const verifyToken = (req, res, next) => {
@@ -49,6 +10,12 @@ const verifyToken = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({
+            message: "Invalid authorization header"
+        });
+    }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -64,4 +31,3 @@ const verifyToken = (req, res, next) => {
 };
 
 module.exports = verifyToken;
->>>>>>> 6bf68f18a687edf69dcc4961d4e969ea7d9aaa5b
