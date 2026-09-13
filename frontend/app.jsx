@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -84,13 +84,41 @@ const [projectError, setProjectError] = useState('');
   ]);
 
   // Projects Data
- const [projectsList, setProjectsList] = useState([]);
+ const [projectsList, setProjectsList] = useState([
+  {
+    id: 1,
+    name: 'Helix Commercial Tower'
+  },
+  {
+    id: 2,
+    name: 'Riverside Residential Complex'
+  },
+  {
+    id: 3,
+    name: 'Northside Infrastructure'
+  }
+]);
+ const [milestonesList, setMilestonesList] = useState([]);
+const [selectedProjectId, setSelectedProjectId] = useState('');
+const [milestonesLoading, setMilestonesLoading] = useState(false);
+const [showAddMilestone, setShowAddMilestone] = useState(false);
+const [milestoneTitle, setMilestoneTitle] = useState('');
+const [milestoneDescription, setMilestoneDescription] = useState('');
+const [milestoneDueDate, setMilestoneDueDate] = useState('');
+const [milestoneStatus, setMilestoneStatus] = useState('Pending');
+const [milestoneProgress, setMilestoneProgress] = useState(0);
+const [milestoneError, setMilestoneError] = useState('');
+useEffect(() => {
+  if (!selectedProjectId && projectsList.length > 0) {
+    setSelectedProjectId(String(projectsList[0].id));
+  }
+}, [projectsList, selectedProjectId]);
 
   // Inventory Data
   const [inventoryList, setInventoryList] = useState([
     { id: 'MAT-01', item: 'Portland Cement (Grade 53)', category: 'Raw Materials', inStock: 840, unit: 'Bags', minReq: 200, status: 'Adequate' },
     { id: 'MAT-02', item: 'TMT Steel Rebars (16mm)', category: 'Metals & Structural', inStock: 42, unit: 'Tons', minReq: 50, status: 'Low Stock' },
-    { id: 'MAT-03', item: 'Ready-Mix Concrete (M30)', category: 'Concrete', inStock: 120, unit: 'm³', minReq: 30, status: 'Adequate' },
+    { id: 'MAT-03', item: 'Ready-Mix Concrete (M30)', category: 'Concrete', inStock: 120, unit: 'm┬│', minReq: 30, status: 'Adequate' },
     { id: 'MAT-04', item: 'Safety Helmets & Vests', category: 'PPE Safety', inStock: 18, unit: 'Units', minReq: 100, status: 'Critical' },
     { id: 'MAT-05', item: 'River Sand (Washed)', category: 'Aggregates', inStock: 350, unit: 'Tons', minReq: 150, status: 'Adequate' }
   ]);
@@ -165,6 +193,64 @@ const handleRoleChange = async (userId, newRole) => {
     console.error(error);
     showNotification('Cannot connect to BuildTrack backend.');
   }
+  const handleCreateMilestone = async (e) => {
+  e.preventDefault();
+  setMilestoneError('');
+
+  if (!selectedProjectId || !milestoneTitle) {
+    setMilestoneError('Project and milestone title are required.');
+    return;
+  }
+
+  const token = localStorage.getItem('buildtrack_token');
+
+  if (!token) {
+    setMilestoneError('Please login again.');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      'http://localhost:5000/api/milestones',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          project_id: Number(selectedProjectId),
+          title: milestoneTitle,
+          description: milestoneDescription,
+          due_date: milestoneDueDate,
+          status: milestoneStatus,
+          progress: Number(milestoneProgress)
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setMilestoneError(data.message || 'Failed to create milestone.');
+      return;
+    }
+
+    setMilestonesList((prev) => [...prev, data.milestone]);
+
+    setMilestoneTitle('');
+    setMilestoneDescription('');
+    setMilestoneDueDate('');
+    setMilestoneStatus('Pending');
+    setMilestoneProgress(0);
+    setShowAddMilestone(false);
+
+    showNotification('Milestone created successfully!');
+  } catch (error) {
+    console.error(error);
+    setMilestoneError('Cannot connect to BuildTrack backend.');
+  }
+};
 };
 const handleRegister = async (e) => {
   e.preventDefault();
@@ -331,6 +417,42 @@ useEffect(() => {
   loadProjects();
 }, [currentUser]);
 
+useEffect(() => {
+  if (!currentUser || !selectedProjectId) return;
+
+  const token = localStorage.getItem('buildtrack_token');
+  if (!token) return;
+
+  const loadMilestones = async () => {
+    try {
+      setMilestonesLoading(true);
+
+      const response = await fetch(
+        `http://localhost:5000/api/milestones/project/${selectedProjectId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch milestones');
+      }
+
+      const milestones = await response.json();
+      setMilestonesList(milestones);
+    } catch (error) {
+      console.error('Failed to load milestones:', error);
+      setMilestonesList([]);
+    } finally {
+      setMilestonesLoading(false);
+    }
+  };
+
+  loadMilestones();
+}, [currentUser, selectedProjectId]);
+
   const handleQuickLogin = (name, email, role, initials) => {
     setCurrentUser({ name, email, role, initials });
     showNotification(`Logged in as ${name} (${role})`);
@@ -480,7 +602,7 @@ useEffect(() => {
 
             {authError && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle classsite-progressName="h-4 w-4" />
                 <span>{authError}</span>
               </div>
             )}
@@ -509,7 +631,7 @@ useEffect(() => {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
-                    placeholder="••••••••"
+                    placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
                   />
                 </div>
               </div>
@@ -518,6 +640,9 @@ useEffect(() => {
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Role</label>
                 <div className="relative">
                   <Shield className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <p className="text-xs text-red-500">
+  Projects: {projectsList.length} | User: {currentUser ? 'Logged in' : 'Not logged in'}
+</p>
                   <select
                     value={loginRole}
                     onChange={(e) => setLoginRole(e.target.value)}
@@ -887,7 +1012,7 @@ useEffect(() => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                      Welcome back, {currentUser.name}! <span>👋</span>
+                      Welcome back, {currentUser.name}! <span>≡ƒæï</span>
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Here is your live construction management overview.</p>
                   </div>
@@ -970,7 +1095,7 @@ useEffect(() => {
                     <div>
                       <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">Mentor Concept</span>
                       <h3 className="text-sm font-bold text-slate-900 mt-1">10-Slot Dynamic Booking & Empty State Handler</h3>
-                      <p className="text-xs text-slate-500">Click any block to cycle: Empty ➔ Pre-Booking ➔ Live Booked</p>
+                      <p className="text-xs text-slate-500">Click any block to cycle: Empty Γ₧ö Pre-Booking Γ₧ö Live Booked</p>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -1049,7 +1174,7 @@ useEffect(() => {
                         }`}>{p.status}</span>
                       </div>
                       <h3 className="font-bold text-sm text-slate-900">{p.name}</h3>
-                      <p className="text-xs text-slate-500">📍 {p.location} • Lead: {p.manager}</p>
+                      <p className="text-xs text-slate-500">≡ƒôì {p.location} ΓÇó Lead: {p.manager}</p>
                       <div>
                         <div className="flex justify-between text-xs font-semibold mb-1">
                           <span>Progress</span>
@@ -1063,12 +1188,13 @@ useEffect(() => {
                         <span className="text-slate-500">Budget: <strong>{p.budget}</strong></span>
                         <button
                           onClick={() => {
-                            setActiveView('site-progress');
-                            showNotification(`Viewing milestones for ${p.name}`);
-                          }}
+  setSelectedProjectId(String(p.id));
+  setActiveView('site-progress');
+  showNotification(`Viewing milestones for ${p.name}`);
+}}
                           className="text-amber-700 font-bold hover:underline"
                         >
-                          View Site →
+                          View Site ΓåÆ
                         </button>
                       </div>
                     </div>
@@ -1084,24 +1210,29 @@ useEffect(() => {
                   <h2 className="text-xl font-bold text-slate-900">Site Progress & Milestones</h2>
                   <p className="text-xs text-slate-500">Live milestones for Helix Commercial Tower (Phase 3)</p>
                 </div>
+                <select
+  value={selectedProjectId}
+  onChange={(e) => setSelectedProjectId(e.target.value)}
+  className="w-full border border-slate-200 p-2.5 text-xs rounded-xl text-slate-900 bg-white"
+>
+  {projectsList.map((project) => (
+    <option key={project.id} value={project.id}>
+      {project.name}
+    </option>
+  ))}
+</select>
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-                  {[
-                    { phase: 'Phase 1: Foundation & Excavation', progress: 100, status: 'Completed', deadline: '15 Jan 2026' },
-                    { phase: 'Phase 2: Substructure & Basement Parking', progress: 100, status: 'Completed', deadline: '28 Feb 2026' },
-                    { phase: 'Phase 3: Superstructure (Floors 1-15)', progress: 74, status: 'In Progress', deadline: '30 Oct 2026' },
-                    { phase: 'Phase 4: MEP Electrical & Plumbing', progress: 35, status: 'Active', deadline: '15 Dec 2026' },
-                    { phase: 'Phase 5: Facade Glazing & Interior Handover', progress: 0, status: 'Pending', deadline: '28 Mar 2027' }
-                  ].map((m, i) => (
-                    <div key={i} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                 {milestonesList.map((m) => (
+                    <div key={m.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-xs text-slate-900">{m.phase}</span>
+                        <span className="font-bold text-xs text-slate-900">{m.title}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.progress === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{m.status}</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
                         <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${m.progress}%` }} />
                       </div>
                       <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Target Deadline: {m.deadline}</span>
+                        <span>Target Deadline: {m.due_date || 'Not set'}</span>
                         <span>{m.progress}% Completed</span>
                       </div>
                     </div>
@@ -1127,7 +1258,7 @@ useEffect(() => {
                   {resourcesList.map((r) => (
                     <div key={r.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex justify-between items-center">
                       <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{r.id} • {r.type}</span>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{r.id} ΓÇó {r.type}</span>
                         <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
                         <p className="text-xs text-slate-500">Assigned: <strong>{r.site}</strong></p>
                         <p className="text-xs text-slate-500">Certified Operator: {r.operator}</p>
@@ -1241,9 +1372,9 @@ useEffect(() => {
                   {procurementsList.map((po) => (
                     <div key={po.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex justify-between items-center">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400">{po.id} • {po.date}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{po.id} ΓÇó {po.date}</span>
                         <h4 className="font-bold text-sm text-slate-900">{po.item}</h4>
-                        <p className="text-xs text-slate-500">Requested by: {po.requestedBy} • Budget: <strong>{po.amount}</strong></p>
+                        <p className="text-xs text-slate-500">Requested by: {po.requestedBy} ΓÇó Budget: <strong>{po.amount}</strong></p>
                       </div>
                       <div>
                         <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${
@@ -1274,9 +1405,9 @@ useEffect(() => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { title: 'Daily Site Diary', date: 'Today, 25 Aug 2026', items: '42 Active Workers • 2 Cranes Operational' },
-                    { title: 'Concrete Cube Strength Report', date: 'Yesterday, 24 Aug 2026', items: 'Grade M30: 31.4 N/mm² (Passed QA/QC)' },
-                    { title: 'Weekly EHS Safety Audit', date: '21 Aug 2026', items: '0 Lost Time Incidents • 100% PPE Adherence' }
+                    { title: 'Daily Site Diary', date: 'Today, 25 Aug 2026', items: '42 Active Workers ΓÇó 2 Cranes Operational' },
+                    { title: 'Concrete Cube Strength Report', date: 'Yesterday, 24 Aug 2026', items: 'Grade M30: 31.4 N/mm┬▓ (Passed QA/QC)' },
+                    { title: 'Weekly EHS Safety Audit', date: '21 Aug 2026', items: '0 Lost Time Incidents ΓÇó 100% PPE Adherence' }
                   ].map((r, i) => (
                     <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
                       <FileText className="h-6 w-6 text-amber-600" />
@@ -1284,7 +1415,7 @@ useEffect(() => {
                       <p className="text-[11px] text-slate-400">{r.date}</p>
                       <p className="text-xs text-slate-600">{r.items}</p>
                       <button onClick={() => showNotification(`Opened ${r.title}`)} className="text-xs text-amber-700 font-bold hover:underline pt-2 inline-block">
-                        View Report →
+                        View Report ΓåÆ
                       </button>
                     </div>
                   ))}
@@ -1513,6 +1644,84 @@ useEffect(() => {
 >
   Launch Project
 </button>
+          </div>
+        </div>
+      )}
+            {/* Modal: Add Milestone */}
+      {showAddMilestone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="font-bold text-sm">Add Project Milestone</h3>
+
+              <button
+                type="button"
+                onClick={() => setShowAddMilestone(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {milestoneError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                {milestoneError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateMilestone} className="space-y-3">
+
+              <input
+                type="text"
+                placeholder="Milestone Title"
+                value={milestoneTitle}
+                onChange={(e) => setMilestoneTitle(e.target.value)}
+                className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+              />
+
+              <textarea
+                placeholder="Description"
+                value={milestoneDescription}
+                onChange={(e) => setMilestoneDescription(e.target.value)}
+                className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+                rows="3"
+              />
+
+              <input
+                type="date"
+                value={milestoneDueDate}
+                onChange={(e) => setMilestoneDueDate(e.target.value)}
+                className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+              />
+
+              <select
+                value={milestoneStatus}
+                onChange={(e) => setMilestoneStatus(e.target.value)}
+                className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+              >
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+
+              <input
+                type="number"
+                min="0"
+                max="100"
+                placeholder="Progress (%)"
+                value={milestoneProgress}
+                onChange={(e) => setMilestoneProgress(e.target.value)}
+                className="w-full border p-2 text-xs rounded-xl text-slate-900 bg-white"
+              />
+
+              <button
+                type="submit"
+                className="w-full bg-amber-600 text-white text-xs font-bold py-2 rounded-xl hover:bg-amber-700"
+              >
+                Create Milestone
+              </button>
+
+            </form>
           </div>
         </div>
       )}
