@@ -1,0 +1,39 @@
+<div class="page">
+  <div class="page-head">
+    <div class="head-left">
+      <div class="head-icon"><mat-icon>{{ icon }}</mat-icon></div>
+      <div>
+        <h2 class="title">{{ title }}</h2>
+        <p class="subtitle">{{ description }}</p>
+      </div>
+    </div>
+    <span class="badge-pill">{{ milestone }}</span>
+  </div>
+
+  <div class="status-card">
+    <mat-icon class="status-icon">schema</mat-icon>
+    <div>
+      <p class="status-title">Database table ready</p>
+      <p class="status-text">
+        The <code>{{ table }}</code> table was designed and created as part of
+        Milestone 1. The API endpoints and screens for this module are scheduled
+        for {{ milestone }}.
+      </p>
+    </div>
+  </div>
+
+  @if (features.length) {
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>checklist</mat-icon> Planned features</h3>
+      <ul class="feature-list">
+        @for (f of features; track f) {
+          <li><mat-icon>radio_button_unchecked</mat-icon><span>{{ f }}</span></li>
+        }
+      </ul>
+    </section>
+  }
+
+  <a class="back-link" routerLink="/dashboard">
+    <mat-icon>arrow_back</mat-icon> Back to dashboard
+  </a>
+</div>

@@ -1,0 +1,57 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="title">My Profile</h2>
+      <p class="subtitle">Your account details, read straight from the JWT-protected API.</p>
+    </div>
+    <span class="badge-pill">Live data</span>
+  </div>
+
+  <div class="profile-grid">
+    <section class="panel identity">
+      <div class="avatar-lg">{{ initials() }}</div>
+      <h3 class="name">{{ user()?.full_name }}</h3>
+      <span class="role-chip">{{ roleLabel() }}</span>
+
+      <div class="meta-row">
+        <mat-icon>mail</mat-icon>
+        <span>{{ user()?.email }}</span>
+      </div>
+      <div class="meta-row">
+        <mat-icon>badge</mat-icon>
+        <span>User ID: {{ user()?.id }}</span>
+      </div>
+      <div class="meta-row">
+        <mat-icon>{{ user()?.is_active ? 'verified' : 'block' }}</mat-icon>
+        <span>{{ user()?.is_active ? 'Active account' : 'Inactive account' }}</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>vpn_key</mat-icon> Access for your role</h3>
+      <p class="panel-sub">
+        Role-based access control is enforced on the backend — each request is
+        checked against your role before any data is returned.
+      </p>
+      <ul class="access-list">
+        @for (a of accessList(); track a) {
+          <li><mat-icon>check_circle</mat-icon><span>{{ a }}</span></li>
+        }
+      </ul>
+
+      <h3 class="panel-title mt"><mat-icon>security</mat-icon> Session</h3>
+      <div class="session-row">
+        <span>Authentication</span>
+        <span class="val">JWT Bearer token</span>
+      </div>
+      <div class="session-row">
+        <span>Password storage</span>
+        <span class="val">bcrypt hashed</span>
+      </div>
+      <div class="session-row">
+        <span>Token expiry</span>
+        <span class="val">60 minutes</span>
+      </div>
+    </section>
+  </div>
+</div>

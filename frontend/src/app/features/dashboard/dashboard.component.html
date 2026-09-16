@@ -1,0 +1,71 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="title">{{ roleLabel() }} Dashboard</h2>
+      <p class="subtitle">
+        Welcome back, {{ authService.currentUser()?.full_name }} — this view is scoped to your role.
+      </p>
+    </div>
+    <span class="badge-pill">Milestone 1</span>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    @for (s of stats(); track s.label) {
+      <div class="stat-card" [class]="s.accent">
+        <div class="stat-top">
+          <span class="stat-label">{{ s.label }}</span>
+          <mat-icon class="stat-icon">{{ s.icon }}</mat-icon>
+        </div>
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-note">{{ s.note }}</div>
+      </div>
+    }
+  </div>
+
+  <div class="two-col">
+    <!-- Deliverables -->
+    <section class="panel">
+      <h3 class="panel-title">
+        <mat-icon>task_alt</mat-icon> Milestone 1 deliverables
+      </h3>
+      <ul class="check-list">
+        @for (d of deliverables; track d.label) {
+          <li>
+            <mat-icon class="check">check_circle</mat-icon>
+            <span>{{ d.label }}</span>
+          </li>
+        }
+      </ul>
+      <div class="progress-wrap">
+        <div class="progress-head">
+          <span>Milestone 1 completion</span>
+          <span class="pct">100%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+      </div>
+    </section>
+
+    <!-- Upcoming modules -->
+    <section class="panel">
+      <h3 class="panel-title">
+        <mat-icon>rocket_launch</mat-icon> Modules ahead
+      </h3>
+      <p class="panel-sub">
+        Database tables for every module are already in place. Functional APIs and
+        screens arrive in the next milestones.
+      </p>
+      <div class="link-grid">
+        @for (q of quickLinks; track q.path) {
+          <a class="link-card" [routerLink]="q.path">
+            <mat-icon>{{ q.icon }}</mat-icon>
+            <div>
+              <span class="link-label">{{ q.label }}</span>
+              <span class="link-desc">{{ q.desc }}</span>
+            </div>
+          </a>
+        }
+      </div>
+    </section>
+  </div>
+</div>

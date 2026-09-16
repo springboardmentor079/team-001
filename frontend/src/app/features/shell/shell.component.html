@@ -1,0 +1,72 @@
+<div class="shell" [class.sidebar-collapsed]="!sidebarOpen()">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">
+        <mat-icon>construction</mat-icon>
+      </div>
+      @if (sidebarOpen()) {
+        <div class="brand-text">
+          <span class="brand-name">BuildTrack</span>
+          <span class="brand-sub">Milestone 1</span>
+        </div>
+      }
+    </div>
+
+    @if (sidebarOpen()) {
+      <p class="nav-heading">Modules</p>
+    }
+
+    <nav class="nav">
+      @for (item of navItems(); track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [title]="item.label"
+        >
+          <mat-icon>{{ item.icon }}</mat-icon>
+          @if (sidebarOpen()) {
+            <span>{{ item.label }}</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button mat-button class="collapse-btn" (click)="toggleSidebar()">
+        <mat-icon>{{ sidebarOpen() ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+        @if (sidebarOpen()) { <span>Collapse</span> }
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main area -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title">BuildTrack</h1>
+        <span class="page-sub">Construction Project Management &amp; Site Monitoring</span>
+      </div>
+
+      <div class="topbar-right">
+        <mat-icon class="bell">notifications</mat-icon>
+        <div class="user-chip">
+          <div class="avatar">{{ initials() }}</div>
+          <div class="user-meta">
+            <span class="user-name">{{ authService.currentUser()?.full_name }}</span>
+            <span class="user-role">{{ roleLabel() }}</span>
+          </div>
+        </div>
+        <button mat-stroked-button class="signout-btn" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Sign out</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
