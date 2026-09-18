@@ -14,6 +14,7 @@ const procurementRoutes = require("./routes/procurementRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const milestone2Routes = require("./routes/milestone2Routes");
 
 const verifyToken = require("./middleware/authMiddleware");
 const allowRoles = require("./middleware/roleMiddleware");
@@ -28,6 +29,7 @@ app.use("/api/progress", progressRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api", milestone2Routes);
 
 app.get("/", (req, res) => {
     res.json({

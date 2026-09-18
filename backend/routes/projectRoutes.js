@@ -11,6 +11,7 @@ const {
     getProjects,
     getProjectById,
     updateProject,
+    closeProject,
     deleteProject
 } = require("../controllers/projectController");
 
@@ -44,6 +45,14 @@ router.put(
     verifyToken,
     allowRoles("Administrator", "Project Manager"),
     updateProject
+);
+
+
+router.patch(
+    "/:id/close",
+    verifyToken,
+    allowRoles("Administrator", "Project Manager"),
+    closeProject
 );
 
 
