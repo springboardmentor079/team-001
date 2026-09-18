@@ -10,8 +10,7 @@ const {
     getProjectReport,
     getProgressReport,
     getResourceReport,
-    getMaterialReport,
-    getWorkforceReport
+    getMaterialReport
 } = require("../controllers/reportController");
 
 
@@ -59,18 +58,6 @@ router.get(
         "Site Engineer"
     ),
     getMaterialReport
-);
-
-
-router.get(
-    "/workforce",
-    verifyToken,
-    allowRoles(
-        "Administrator",
-        "Project Manager",
-        "Site Engineer"
-    ),
-    getWorkforceReport
 );
 
 

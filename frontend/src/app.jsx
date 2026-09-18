@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Login } from './pages/Login';
 import { Signup } from './pages/signup';
-import { Dashboard } from './pages/Dashnoard';
+import { Dashboard } from './pages/Dashboard';
 import { api, getToken, getStoredUser } from './services/api';
 
 export default function App() {
@@ -10,7 +10,6 @@ export default function App() {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Check existing token validity on startup via GET /api/profile
   useEffect(() => {
     const initAuth = async () => {
       const token = getToken();
