@@ -1,51 +1,29 @@
 const express = require("express");
 
-const router = express.Router();
-
-const verifyToken = require("../middleware/authMiddleware");
-
 const {
-    createProcurement,
-    getProcurements,
-    getProcurementById,
-    updateProcurement,
-    deleteProcurement
+  createProcurement,
+  getProcurements,
+  getProcurementById,
+  updateProcurement,
+  updateProcurementStatus,
+  deleteProcurement,
+  getProcurementSummary
 } = require("../controllers/procurementController");
 
+const router = express.Router();
 
-router.post(
-    "/",
-    verifyToken,
-    createProcurement
-);
+router.get("/summary", getProcurementSummary);
 
+router.get("/", getProcurements);
 
-router.get(
-    "/",
-    verifyToken,
-    getProcurements
-);
+router.get("/:id", getProcurementById);
 
+router.post("/", createProcurement);
 
-router.get(
-    "/:id",
-    verifyToken,
-    getProcurementById
-);
+router.put("/:id", updateProcurement);
 
+router.patch("/:id/status", updateProcurementStatus);
 
-router.put(
-    "/:id",
-    verifyToken,
-    updateProcurement
-);
-
-
-router.delete(
-    "/:id",
-    verifyToken,
-    deleteProcurement
-);
-
+router.delete("/:id", deleteProcurement);
 
 module.exports = router;

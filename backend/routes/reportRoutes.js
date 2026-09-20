@@ -1,64 +1,32 @@
 const express = require("express");
 
-const router = express.Router();
-
-const verifyToken = require("../middleware/authMiddleware");
-
-const allowRoles = require("../middleware/roleMiddleware");
-
 const {
-    getProjectReport,
-    getProgressReport,
-    getResourceReport,
-    getMaterialReport
+  getProjectReport,
+  getProgressReport,
+  getResourceReport,
+  getInventoryReport,
+  getProcurementReport,
+  getWorkforceReport,
+  getAttendanceReport,
+  getAnalyticalReport
 } = require("../controllers/reportController");
 
+const router = express.Router();
 
-router.get(
-    "/projects",
-    verifyToken,
-    allowRoles(
-        "Administrator",
-        "Project Manager"
-    ),
-    getProjectReport
-);
+router.get("/analytical", getAnalyticalReport);
 
+router.get("/project/:projectId", getProjectReport);
 
-router.get(
-    "/progress",
-    verifyToken,
-    allowRoles(
-        "Administrator",
-        "Project Manager",
-        "Site Engineer"
-    ),
-    getProgressReport
-);
+router.get("/progress/:projectId", getProgressReport);
 
+router.get("/resources/:projectId", getResourceReport);
 
-router.get(
-    "/resources",
-    verifyToken,
-    allowRoles(
-        "Administrator",
-        "Project Manager",
-        "Site Engineer"
-    ),
-    getResourceReport
-);
+router.get("/inventory/:projectId", getInventoryReport);
 
+router.get("/procurement/:projectId", getProcurementReport);
 
-router.get(
-    "/materials",
-    verifyToken,
-    allowRoles(
-        "Administrator",
-        "Project Manager",
-        "Site Engineer"
-    ),
-    getMaterialReport
-);
+router.get("/workforce/:projectId", getWorkforceReport);
 
+router.get("/attendance/:projectId", getAttendanceReport);
 
 module.exports = router;
