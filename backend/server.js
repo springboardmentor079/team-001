@@ -20,10 +20,10 @@ const reportRoutes = require("./routes/reportRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const milestone2Routes = require("./routes/milestone2Routes");
 const documentRoutes = require("./routes/documentRoutes");
-
+const analyticsRoutes = require("./routes/analyticsRoutes");
 const verifyToken = require("./middleware/authMiddleware");
 const allowRoles = require("./middleware/roleMiddleware");
-
+app.use("/api/analytics", analyticsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/worker", workerRoutes);
