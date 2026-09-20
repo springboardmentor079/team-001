@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1789883965245,
+    "title": "Sample Upload",
+    "category": "Reports",
+    "owner": "Demo User",
+    "status": "Draft",
+    "revision": "v1.0",
+    "updated": "2026-09-20",
+    "fileType": "TXT",
+    "originalName": "sample-upload.txt",
+    "fileName": "1789883965230-428907331-sample-upload.txt",
+    "fileUrl": "/uploads/1789883965230-428907331-sample-upload.txt",
+    "size": 69
+  }
+]

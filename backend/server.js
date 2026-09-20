@@ -1,8 +1,12 @@
 const express = require("express");
+const path = require("path");
+const cors = require("cors");
 
 const app = express();
 
-app.use(express.json());
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projectRoutes");
@@ -15,6 +19,7 @@ const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const milestone2Routes = require("./routes/milestone2Routes");
+const documentRoutes = require("./routes/documentRoutes");
 
 const verifyToken = require("./middleware/authMiddleware");
 const allowRoles = require("./middleware/roleMiddleware");
@@ -29,6 +34,7 @@ app.use("/api/progress", progressRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api/documents", documentRoutes);
 app.use("/api", milestone2Routes);
 
 app.get("/", (req, res) => {

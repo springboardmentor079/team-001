@@ -49,7 +49,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_users_id", "users", ["id"])
     op.create_index("ix_users_email", "users", ["email"], unique=True)
     op.create_index("ix_users_role", "users", ["role"])
 
@@ -104,7 +103,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_projects_id", "projects", ["id"])
     op.create_index("ix_projects_project_code", "projects", ["project_code"], unique=True)
     op.create_index("ix_projects_project_manager_id", "projects", ["project_manager_id"])
     op.create_index("ix_projects_client_id", "projects", ["client_id"])
@@ -138,7 +136,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_project_milestones_id", "project_milestones", ["id"])
     op.create_index("ix_project_milestones_project_id", "project_milestones", ["project_id"])
 
     # ------------------------------------------------------------------
@@ -185,7 +182,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_resources_id", "resources", ["id"])
     op.create_index("ix_resources_assigned_project_id", "resources", ["assigned_project_id"])
 
     # ------------------------------------------------------------------
@@ -217,7 +213,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_inventory_id", "inventory", ["id"])
 
     # ------------------------------------------------------------------
     # workers
@@ -261,7 +256,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_workers_id", "workers", ["id"])
     op.create_index("ix_workers_user_id", "workers", ["user_id"], unique=True)
     op.create_index("ix_workers_assigned_project_id", "workers", ["assigned_project_id"])
 
@@ -295,7 +289,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_attendance_id", "attendance", ["id"])
     op.create_index("ix_attendance_worker_id", "attendance", ["worker_id"])
     op.create_index("ix_attendance_project_id", "attendance", ["project_id"])
     op.create_index("ix_attendance_attendance_date", "attendance", ["attendance_date"])
@@ -347,7 +340,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_procurements_id", "procurements", ["id"])
     op.create_index("ix_procurements_project_id", "procurements", ["project_id"])
 
     # ------------------------------------------------------------------
@@ -373,7 +365,6 @@ def upgrade() -> None:
         sa.Column("is_read", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_notifications_id", "notifications", ["id"])
     op.create_index("ix_notifications_user_id", "notifications", ["user_id"])
 
     # ------------------------------------------------------------------
@@ -404,7 +395,6 @@ def upgrade() -> None:
         sa.Column("file_path", sa.String(length=500), nullable=True),
         sa.Column("generated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_reports_id", "reports", ["id"])
     op.create_index("ix_reports_project_id", "reports", ["project_id"])
 
 

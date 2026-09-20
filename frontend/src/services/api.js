@@ -36,8 +36,9 @@ export const formatApiError = (status, errorBody, defaultMsg = 'An unexpected er
 
 async function request(endpoint, options = {}) {
   const token = getToken();
+  const isFormData = options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
@@ -174,6 +175,10 @@ export const api = {
   getProgressReport: () => get('/api/reports/progress'),
   getResourceReport: () => get('/api/reports/resources'),
   getMaterialReport: () => get('/api/reports/materials'),
+
+  getDocuments: () => get('/api/documents'),
+  uploadDocument: (formData) => request('/api/documents/upload', { method: 'POST', body: formData }),
+  deleteDocument: (id) => del(`/api/documents/${id}`),
 };
 
 export default api;

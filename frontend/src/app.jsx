@@ -57,10 +57,10 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans">
+      <div className="min-h-screen flex items-center justify-center font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
         <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-slate-400 font-semibold">Connecting to BuildTrack API...</p>
+          <div className="h-8 w-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold" style={{ color: '#4b5563', letterSpacing: '0.08em' }}>Connecting to BuildTrack API...</p>
         </div>
       </div>
     );
@@ -87,7 +87,7 @@ export default function App() {
 
   // Authenticated workspace: Navbar + Dashboard
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
       <Navbar currentUser={currentUser} onLogout={handleLogout} />
       <Dashboard currentUser={currentUser} onLogout={handleLogout} />
     </div>

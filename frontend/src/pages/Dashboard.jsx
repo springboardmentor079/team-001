@@ -4,8 +4,11 @@ import {
   Bell,
   Calendar,
   CheckCircle2,
+  Download,
   Edit3,
+  FileText,
   FolderKanban,
+  FolderOpen,
   Layers,
   Plus,
   RefreshCw,
@@ -13,6 +16,7 @@ import {
   SlidersHorizontal,
   Trash2,
   Truck,
+  Upload,
   UserCheck,
   Users,
   Wrench,
@@ -21,11 +25,20 @@ import {
 import { Button } from '../components/Button';
 import { api } from '../services/api';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const PROJECT_CATEGORIES = ['Residential', 'Commercial', 'Industrial', 'Infrastructure', 'Government Projects'];
 const RESOURCE_CATEGORIES = ['EXCAVATORS', 'CONCRETE_MIXERS', 'CRANES', 'DUMP_TRUCKS', 'GENERATORS', 'SAFETY_EQUIPMENT'];
 const RESOURCE_STATUSES = ['AVAILABLE', 'IN_USE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'];
 const MATERIAL_CATEGORIES = ['CEMENT', 'STEEL', 'BRICKS', 'SAND', 'CONCRETE', 'ELECTRICAL_MATERIALS', 'PLUMBING_MATERIALS'];
 const WORKFORCE_ROLES = ['Engineer', 'Supervisor', 'Contractor', 'Skilled Worker', 'Unskilled Worker', 'Consultant'];
+const MILESTONE_DOCUMENTS = [
+  { id: 1, title: 'Purchase Order Summary', category: 'Procurement', owner: 'Procurement Lead', status: 'Approved', revision: 'v2.1', updated: '2026-09-18', fileType: 'PDF' },
+  { id: 2, title: 'Vendor Evaluation Sheet', category: 'Procurement', owner: 'Admin', status: 'Review', revision: 'v1.8', updated: '2026-09-17', fileType: 'XLSX' },
+  { id: 3, title: 'Site Notification Log', category: 'Notifications', owner: 'Project Manager', status: 'Sent', revision: 'v3.0', updated: '2026-09-19', fileType: 'DOCX' },
+  { id: 4, title: 'Safety Alert Memo', category: 'Notifications', owner: 'Site Engineer', status: 'Pending', revision: 'v1.2', updated: '2026-09-15', fileType: 'PDF' },
+  { id: 5, title: 'Weekly Procurement Report', category: 'Reports', owner: 'Finance', status: 'Published', revision: 'v4.4', updated: '2026-09-20', fileType: 'PDF' },
+  { id: 6, title: 'Stakeholder Update Report', category: 'Reports', owner: 'PMO', status: 'Draft', revision: 'v2.3', updated: '2026-09-16', fileType: 'DOCX' },
+];
 
 const emptyProject = {
   name: '', description: '', category: 'Residential', location: '', start_date: '', end_date: '', budget: '', status: 'planning'
@@ -96,6 +109,7 @@ export const Dashboard = ({ currentUser }) => {
   const [shifts, setShifts] = useState([]);
   const [payroll, setPayroll] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [profileData, setProfileData] = useState(null);
 
   const [projectModal, setProjectModal] = useState(null);
@@ -122,6 +136,8 @@ export const Dashboard = ({ currentUser }) => {
   const [shiftForm, setShiftForm] = useState({ project_id: '', shift_name: '', shift_date: '', start_time: '', end_time: '', status: 'SCHEDULED' });
   const [payrollForm, setPayrollForm] = useState({ worker_id: '', project_id: '', pay_period_start: '', pay_period_end: '', days_worked: '', daily_wage: '', overtime: 0, deductions: 0, payment_status: 'PENDING' });
   const [procurementForm, setProcurementForm] = useState({ project_id: '', item_name: '', category: 'RAW_MATERIALS', quantity: '', unit_price: '', supplier: '', status: 'REQUESTED', order_date: '', delivery_date: '' });
+  const [documentForm, setDocumentForm] = useState({ category: 'Procurement', owner: '', status: 'Draft', revision: 'v1.0' });
+  const [documentFile, setDocumentFile] = useState(null);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
 
   const showNotice = (message) => {
@@ -155,6 +171,7 @@ export const Dashboard = ({ currentUser }) => {
       safe('shifts', api.getShifts, setShifts, (v) => Array.isArray(v) ? v : []),
       safe('payroll', api.getPayroll, setPayroll, (v) => Array.isArray(v) ? v : []),
       safe('notifications', api.getNotifications, setNotifications, (v) => Array.isArray(v) ? v : []),
+      safe('documents', api.getDocuments, setDocuments, (v) => Array.isArray(v) ? v : []),
       safe('profile', api.getProfile, setProfileData, (v) => v?.user || v),
     ]);
 
@@ -289,6 +306,44 @@ export const Dashboard = ({ currentUser }) => {
     setEditProfile(false);
   };
 
+  const handleDocumentUpload = async (event) => {
+    event.preventDefault();
+    if (!documentFile) {
+      showNotice('Please choose a file to upload.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', documentFile);
+      formData.append('title', documentFile.name.replace(/\.[^.]+$/, '') || 'Milestone 3 Document');
+      formData.append('category', documentForm.category || 'Procurement');
+      formData.append('owner', documentForm.owner || currentUser?.name || 'Team');
+      formData.append('status', documentForm.status || 'Draft');
+      formData.append('revision', documentForm.revision || 'v1.0');
+
+      await api.uploadDocument(formData);
+      setDocumentFile(null);
+      setDocumentForm({ category: 'Procurement', owner: currentUser?.name || '', status: 'Draft', revision: 'v1.0' });
+      event.target.reset();
+      showNotice('Document uploaded successfully.');
+      await loadDashboardData();
+    } catch (error) {
+      showNotice(error.message);
+    }
+  };
+
+  const handleDeleteDocument = async (id) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      await api.deleteDocument(id);
+      showNotice('Document deleted.');
+      await loadDashboardData();
+    } catch (error) {
+      showNotice(error.message);
+    }
+  };
+
   const openProject = (mode, item = null) => { setProjectForm(item ? { ...emptyProject, ...item } : emptyProject); setProjectModal({ mode, item }); };
   const openResource = (mode, item = null) => { setResourceForm(item ? { ...emptyResource, ...item, project_id: item.project_id || item.assigned_project_id || '', status: item.status || item.availability_status || 'AVAILABLE' } : emptyResource); setResourceModal({ mode, item }); };
   const openInventory = (mode, item = null) => { setInventoryForm(item ? { ...emptyInventory, ...item } : emptyInventory); setInventoryModal({ mode, item }); };
@@ -306,6 +361,7 @@ export const Dashboard = ({ currentUser }) => {
           <TabButton active={activeTab === 'inventory'} icon={Layers} label="Materials & Inventory" onClick={() => setActiveTab('inventory')} />
           <TabButton active={activeTab === 'workforce'} icon={Users} label="Workers & Attendance" onClick={() => setActiveTab('workforce')} />
           <TabButton active={activeTab === 'procurement'} icon={ShoppingCart} label="Procurement" onClick={() => setActiveTab('procurement')} />
+          <TabButton active={activeTab === 'documents'} icon={FolderOpen} label="Milestone 3 Documents" onClick={() => setActiveTab('documents')} />
           <TabButton active={activeTab === 'shifts'} icon={Calendar} label="Shift Scheduling" onClick={() => setActiveTab('shifts')} />
           <TabButton active={activeTab === 'payroll'} icon={CheckCircle2} label="Payroll" onClick={() => setActiveTab('payroll')} />
           <TabButton active={activeTab === 'notifications'} icon={Bell} label="Notifications" onClick={() => setActiveTab('notifications')} />
@@ -403,6 +459,112 @@ export const Dashboard = ({ currentUser }) => {
           {procurements.length ? <div className="space-y-3">{procurements.map((p) => <Card key={p.id}><div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3"><div><p className="text-[10px] text-amber-400">PO #{p.id} • {p.category}</p><h3 className="font-bold text-white">{p.item_name}</h3><p className="text-xs text-slate-400">Qty: {p.quantity} • Supplier: {p.supplier || 'N/A'}</p></div><StatusBadge status={p.status} /></div></Card>)}</div> : <Empty text="No procurement records" />}
         </Section>}
 
+        {activeTab === 'documents' && (
+          <Section
+            title="Milestone 3: Week 5 & 6 — Procurement, Notifications & Reports Documents"
+            subtitle="Upload and manage procurement, alerts and reporting document files"
+          >
+            <Card>
+              <form onSubmit={handleDocumentUpload} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 items-end">
+                <div className="xl:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Choose file</label>
+                  <input
+                    type="file"
+                    className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-amber-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-slate-950"
+                    onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Category</label>
+                  <select className={inputClass} value={documentForm.category} onChange={(e) => setDocumentForm({ ...documentForm, category: e.target.value })}>
+                    <option value="Procurement">Procurement</option>
+                    <option value="Notifications">Notifications</option>
+                    <option value="Reports">Reports</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Owner</label>
+                  <input className={inputClass} value={documentForm.owner} onChange={(e) => setDocumentForm({ ...documentForm, owner: e.target.value })} placeholder="Team member" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Status</label>
+                  <select className={inputClass} value={documentForm.status} onChange={(e) => setDocumentForm({ ...documentForm, status: e.target.value })}>
+                    <option value="Draft">Draft</option>
+                    <option value="Review">Review</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Published">Published</option>
+                    <option value="Sent">Sent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Revision</label>
+                  <input className={inputClass} value={documentForm.revision} onChange={(e) => setDocumentForm({ ...documentForm, revision: e.target.value })} placeholder="v1.0" />
+                </div>
+                <div className="md:col-span-2 xl:col-span-5 flex justify-end">
+                  <Button type="submit">
+                    <Upload className="h-4 w-4" /> Upload Document
+                  </Button>
+                </div>
+              </form>
+            </Card>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-6">
+              {['Procurement', 'Notifications', 'Reports'].map((group) => {
+                const items = documents.filter((doc) => doc.category === group);
+                return (
+                  <Card key={group}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                          {group === 'Procurement' ? <ShoppingCart className="h-4 w-4" /> : group === 'Notifications' ? <Bell className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400">Category</p>
+                          <h3 className="font-bold text-white">{group}</h3>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {items.length ? items.map((doc) => (
+                        <div key={doc.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-bold text-white">{doc.title || doc.originalName || 'Document'}</p>
+                              <p className="text-[10px] text-slate-400 mt-1">{doc.owner || 'Team'} • {doc.fileType || 'FILE'}</p>
+                            </div>
+                            <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${doc.status === 'Approved' || doc.status === 'Published' || doc.status === 'Sent' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : doc.status === 'Review' || doc.status === 'Pending' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
+                              {doc.status}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400">
+                            <span>Rev {doc.revision || 'v1.0'}</span>
+                            <span>{doc.updated || new Date().toISOString().slice(0, 10)}</span>
+                          </div>
+                          <div className="mt-3 flex gap-2 flex-wrap">
+                            <a
+                              className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-amber-400 hover:bg-amber-500/10"
+                              target="_blank"
+                              rel="noreferrer"
+                              href={doc.fileUrl ? `${API_BASE_URL}${doc.fileUrl}` : '#'}
+                            >
+                              <Download className="h-3 w-3" /> Download
+                            </a>
+                            <button className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-red-100 bg-red-500/15 border border-red-400/40 shadow-[0_0_0_1px_rgba(248,113,113,0.2)] hover:bg-red-500/25 hover:text-white" onClick={() => handleDeleteDocument(doc.id)}>
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
+                          </div>
+                        </div>
+                      )) : <p className="text-xs text-slate-500">No documents in this category yet.</p>}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
         {activeTab === 'workforce' && <Section title="Workforce Management" subtitle="Register workers, record attendance and allocate workforce" action={<div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setAttendanceModal(true)}>Record Attendance</Button><Button variant="secondary" onClick={() => setWorkforceAllocationModal(true)}>Allocate Worker</Button><Button onClick={() => openWorker('create')}><Plus className="h-4 w-4" /> Register Worker</Button></div>}>
           <Card><div className="flex items-center justify-between mb-3"><h3 className="font-bold text-white">Workers</h3><span className="text-xs text-slate-400">{workforceAllocations.length} allocations</span></div>{workers.length ? <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{workers.map((w) => <div key={w.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800"><p className="font-bold text-white">{w.name}</p><p className="text-xs text-slate-400">{w.email}</p><p className="text-xs text-amber-400 mt-1">{w.role}</p><div className="flex gap-2 mt-3"><ActionButton icon={Edit3} text="Edit" onClick={() => openWorker('edit', w)} /><ActionButton danger icon={Trash2} text="Delete" onClick={async () => { if (window.confirm('Delete this worker?')) { try { await api.deleteWorker(w.id); await loadDashboardData(); showNotice('Worker deleted.'); } catch (e) { showNotice(e.message); } } }} /></div></div>)}</div> : <Empty text="No workers registered" />}</Card>
           <Card><h3 className="font-bold text-white mb-3">Attendance</h3>{attendance.length ? <div className="space-y-2">{attendance.slice(0, 10).map((a) => <div key={a.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-950"><span className="text-xs text-slate-300">Worker #{a.worker_id} • {a.attendance_date}</span><span className="text-xs text-amber-400">{a.status} • {a.check_in || '--:--'} - {a.check_out || '--:--'}</span></div>)}</div> : <Empty text="No attendance records" />}</Card>
@@ -456,7 +618,7 @@ const Metric = ({ title, value, icon: Icon, extra }) => <Card><div className="fl
 const Info = ({ label, value }) => <div><span className="text-[10px] text-slate-500 block">{label}</span><span className="text-sm text-white font-medium break-words">{value}</span></div>;
 const Th = ({ children }) => <th className="p-3.5 font-semibold">{children}</th>;
 const Td = ({ children, className = '' }) => <td className={`p-3.5 text-slate-300 ${className}`}>{children}</td>;
-const ActionButton = ({ icon: Icon, text, onClick, danger = false }) => <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${danger ? 'text-rose-400 hover:bg-rose-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}><Icon className="h-3.5 w-3.5" />{text}</button>;
+const ActionButton = ({ icon: Icon, text, onClick, danger = false }) => <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${danger ? 'bg-red-500/15 text-red-100 border-red-400/40 hover:bg-red-500/25 hover:text-white' : 'text-amber-400 hover:bg-amber-500/10 border-transparent'} `}><Icon className="h-3.5 w-3.5" />{text}</button>;
 const StatusBadge = ({ status }) => <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 uppercase">{String(status || 'N/A').replaceAll('_', ' ')}</span>;
 
 export default Dashboard;

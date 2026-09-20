@@ -3,10 +3,10 @@ import React from 'react';
 export const Button = ({ children, variant = 'primary', className = '', ...props }) => {
   const baseStyles = 'px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer';
   const variants = {
-    primary: 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20',
-    secondary: 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700',
-    outline: 'border border-amber-500/40 text-amber-300 hover:bg-amber-500/10',
-    danger: 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30',
+    primary: 'bg-[#facc15] hover:bg-[#fcd34d] text-[#111111] shadow-[0_14px_28px_rgba(250,204,21,0.28)]',
+    secondary: 'bg-[#111111] hover:bg-[#1a1a1a] text-[#fffdf5] border border-[#111111]',
+    outline: 'border border-[#facc15]/70 text-[#111111] bg-[#fffdf5] hover:bg-[#fef3c7]',
+    danger: 'bg-red-500/15 hover:bg-red-500/25 text-red-100 border border-red-400/50 shadow-[0_0_0_1px_rgba(248,113,113,0.2)]',
   };
 
   return (
