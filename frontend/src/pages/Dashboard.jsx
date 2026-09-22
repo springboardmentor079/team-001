@@ -26,7 +26,7 @@ const RESOURCE_CATEGORIES = ['CRANES', 'EXCAVATORS', 'CONCRETE_MIXERS', 'DUMP_TR
 const RESOURCE_STATUSES = ['AVAILABLE', 'IN_USE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'];
 const MATERIAL_CATEGORIES = ['CEMENT', 'STEEL', 'BRICKS', 'SAND', 'CONCRETE', 'ELECTRICAL_MATERIALS'];
 
-export const Dashboard = ({ currentUser, onSignOut }) => {
+export const Dashboard = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [notice, setNotice] = useState('');
 
@@ -61,7 +61,7 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
     },
   ]);
 
-  // 2. Timeline Phases (No "Milestone" naming!)
+  // 2. Timeline Progress
   const [phases, setPhases] = useState([
     { id: 1, name: 'Basement Excavation & Piling Foundation', description: 'Securing bored cast-in-situ piles and diaphragm retaining walls', completion_pct: 100, status: 'Completed', due_date: '2026-04-15' },
     { id: 2, name: 'Podium & Structural RCC Framing (Floors 1-12)', description: 'Post-tensioned slab casting and shear wall reinforcement', completion_pct: 68, status: 'In Progress', due_date: '2026-10-30' },
@@ -191,19 +191,20 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
   };
 
   return (
-    <div style={{ backgroundColor: '#090d16', color: '#ffffff' }} className="flex min-h-screen w-full font-sans">
-      {/* SIDEBAR */}
-      <aside style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="w-64 border-r p-4 hidden md:flex flex-col justify-between shrink-0">
-        <div className="space-y-2">
-          {/* Logo Header - Cleaned */}
-          <div className="flex items-center gap-2 px-3 py-2 mb-2">
-            <div className="h-8 w-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-black">BT</div>
+    <div style={{ backgroundColor: '#fcfcfb', color: '#18181b' }} className="flex min-h-screen w-full font-sans">
+      {/* BRIGHT SIDEBAR */}
+      <aside style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="w-64 border-r p-4 hidden md:flex flex-col justify-between shrink-0 shadow-sm">
+        <div className="space-y-4">
+          {/* Clean Logo Header */}
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="h-9 w-9 rounded-xl bg-[#facc15] flex items-center justify-center text-black font-black shadow-md shadow-yellow-400/30">BT</div>
             <div>
-              <h1 className="text-base font-black text-white leading-none">BuildTrack</h1>
-              <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-1">Enterprise PM</p>
+              <h1 className="text-base font-black text-black leading-none">BuildTrack</h1>
+              <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider mt-1">Enterprise PM</p>
             </div>
           </div>
 
+          {/* Navigation */}
           <div className="space-y-1">
             {[
               { id: 'overview', icon: Activity, label: 'Overview' },
@@ -221,8 +222,11 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  style={{ backgroundColor: active ? '#f59e0b' : 'transparent', color: active ? '#0f172a' : '#94a3b8' }}
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer hover:text-white"
+                  style={{
+                    backgroundColor: active ? '#facc15' : 'transparent',
+                    color: active ? '#000000' : '#52525b',
+                  }}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer hover:bg-yellow-50 hover:text-black"
                 >
                   <Icon className="h-4 w-4" />
                   <span>{tab.label}</span>
@@ -233,82 +237,82 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         </div>
 
         {/* User Card */}
-        <div style={{ backgroundColor: '#090d16', borderColor: '#1e293b' }} className="p-3.5 rounded-2xl border">
-          <p className="text-[10px] text-slate-400 font-semibold">Active User</p>
-          <p className="text-xs font-bold text-amber-400 truncate">{currentUser?.name || 'Rohitha Mamidisetti'}</p>
-          <p className="text-[10px] text-slate-400">PROJECT MANAGER</p>
+        <div style={{ backgroundColor: '#fffbeb', borderColor: '#fef3c7' }} className="p-3.5 rounded-2xl border">
+          <p className="text-[10px] text-gray-500 font-semibold">Logged in as</p>
+          <p className="text-xs font-black text-black truncate">{currentUser?.name || 'Rohitha Mamidisetti'}</p>
+          <p className="text-[10px] text-amber-700 font-bold uppercase">PROJECT MANAGER</p>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* BRIGHT MAIN CONTENT */}
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto space-y-6">
         {/* Top Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-black text-white">Construction Operations Workspace</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Real-time equipment tracking, supply chain stockpile, and progress verification</p>
+            <h2 className="text-2xl font-black text-black">Construction Operations Workspace</h2>
+            <p className="text-xs text-gray-600 mt-1">Real-time equipment tracking, supply chain stockpile, and progress verification</p>
           </div>
           <button
             onClick={() => { localStorage.clear(); window.location.reload(); }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs font-bold text-gray-800 shadow-sm cursor-pointer"
           >
-            <LogOut className="h-4 w-4 text-amber-400" /> Sign Out
+            <LogOut className="h-4 w-4 text-amber-600" /> Sign Out
           </button>
         </div>
 
-        {notice && <div className="p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">{notice}</div>}
+        {notice && <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{notice}</div>}
 
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="border p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="border p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
               <div>
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Active Flagship Project</span>
-                <h3 className="text-2xl font-black text-white mt-1">{projects[0]?.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">Multi-site operations and equipment resource coordination</p>
+                <span className="text-xs font-bold text-amber-600 uppercase tracking-widest">Active Flagship Project</span>
+                <h3 className="text-2xl font-black text-black mt-1">{projects[0]?.name}</h3>
+                <p className="text-xs text-gray-600 mt-1">Multi-site operations and equipment resource coordination</p>
               </div>
               <div className="flex gap-4">
-                <div style={{ backgroundColor: '#090d16' }} className="px-5 py-3 rounded-2xl border border-slate-800 text-right">
-                  <span className="text-[10px] text-slate-400 block">Portfolio Budget</span>
-                  <span className="text-lg font-black text-white">${totalBudget.toLocaleString()}</span>
+                <div style={{ backgroundColor: '#fafaf9', borderColor: '#e4e4e7' }} className="px-5 py-3 rounded-2xl border text-right">
+                  <span className="text-[10px] text-gray-500 block font-semibold">Portfolio Budget</span>
+                  <span className="text-lg font-black text-black">${totalBudget.toLocaleString()}</span>
                 </div>
-                <div style={{ backgroundColor: '#090d16' }} className="px-5 py-3 rounded-2xl border border-slate-800 text-right">
-                  <span className="text-[10px] text-amber-400 block">Overall Completion</span>
-                  <span className="text-lg font-black text-amber-400">{totalProgress}%</span>
+                <div style={{ backgroundColor: '#fefce8', borderColor: '#fef08a' }} className="px-5 py-3 rounded-2xl border text-right">
+                  <span className="text-[10px] text-amber-700 block font-semibold">Overall Completion</span>
+                  <span className="text-lg font-black text-amber-700">{totalProgress}%</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
-                <div className="flex justify-between text-slate-400"><span className="text-xs font-semibold">Active Projects</span><FolderKanban className="h-4 w-4 text-amber-400" /></div>
-                <p className="text-2xl font-black text-white mt-2">{projects.length}</p>
+              <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
+                <div className="flex justify-between text-gray-500"><span className="text-xs font-bold">Active Projects</span><FolderKanban className="h-4 w-4 text-amber-500" /></div>
+                <p className="text-3xl font-black text-black mt-2">{projects.length}</p>
               </div>
-              <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
-                <div className="flex justify-between text-slate-400"><span className="text-xs font-semibold">Fleet Assets</span><Truck className="h-4 w-4 text-amber-400" /></div>
-                <p className="text-2xl font-black text-white mt-2">{resources.length}</p>
-                <p className="text-[10px] text-amber-400 mt-1">88% Utilization Rate</p>
+              <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
+                <div className="flex justify-between text-gray-500"><span className="text-xs font-bold">Fleet Assets</span><Truck className="h-4 w-4 text-amber-500" /></div>
+                <p className="text-3xl font-black text-black mt-2">{resources.length}</p>
+                <p className="text-xs text-amber-700 mt-1 font-bold">88% Utilization Rate</p>
               </div>
-              <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
-                <div className="flex justify-between text-slate-400"><span className="text-xs font-semibold">Material Reserves</span><Layers className="h-4 w-4 text-amber-400" /></div>
-                <p className="text-2xl font-black text-white mt-2">{inventory.length}</p>
-                <p className="text-[10px] text-emerald-400 mt-1">Supplies Verified</p>
+              <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
+                <div className="flex justify-between text-gray-500"><span className="text-xs font-bold">Material Reserves</span><Layers className="h-4 w-4 text-amber-500" /></div>
+                <p className="text-3xl font-black text-black mt-2">{inventory.length}</p>
+                <p className="text-xs text-emerald-700 mt-1 font-bold">Supplies Verified</p>
               </div>
-              <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
-                <div className="flex justify-between text-slate-400"><span className="text-xs font-semibold">Verified Documents</span><FolderOpen className="h-4 w-4 text-amber-400" /></div>
-                <p className="text-2xl font-black text-white mt-2">{documents.length}</p>
-                <p className="text-[10px] text-slate-400 mt-1">Stored in Vault</p>
+              <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
+                <div className="flex justify-between text-gray-500"><span className="text-xs font-bold">Verified Documents</span><FolderOpen className="h-4 w-4 text-amber-500" /></div>
+                <p className="text-3xl font-black text-black mt-2">{documents.length}</p>
+                <p className="text-xs text-gray-500 mt-1 font-semibold">Stored in Vault</p>
               </div>
             </div>
 
             {/* Overall Bar */}
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-6 rounded-3xl border">
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-6 rounded-3xl border shadow-sm">
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-bold text-white">Overall Portfolio Progress</span>
-                <span className="text-sm font-black text-amber-400">{totalProgress}%</span>
+                <span className="text-sm font-black text-black">Overall Portfolio Progress</span>
+                <span className="text-sm font-black text-amber-700">{totalProgress}%</span>
               </div>
-              <div className="h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300" style={{ width: `${totalProgress}%` }} />
+              <div className="h-3.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+                <div className="h-full bg-gradient-to-r from-amber-400 to-yellow-500" style={{ width: `${totalProgress}%` }} />
               </div>
             </div>
           </div>
@@ -318,27 +322,27 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {activeTab === 'projects' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <div><h3 className="text-xl font-black text-white">Project Management</h3><p className="text-xs text-slate-400">All registered capital infrastructure projects</p></div>
-              <button onClick={() => setOpenProjectModal(true)} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer">
+              <div><h3 className="text-xl font-black text-black">Project Management</h3><p className="text-xs text-gray-600">All registered capital infrastructure projects</p></div>
+              <button onClick={() => setOpenProjectModal(true)} className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black text-xs font-black rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer">
                 <Plus className="h-4 w-4" /> Create Project
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {projects.map((p) => (
-                <div key={p.id} style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border flex flex-col justify-between">
+                <div key={p.id} style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start">
-                      <div><span className="text-[10px] text-amber-400 font-mono font-bold">Project #{p.id}</span><h4 className="text-base font-black text-white">{p.name}</h4></div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 uppercase">{p.status}</span>
+                      <div><span className="text-[10px] text-amber-700 font-mono font-black">Project #{p.id}</span><h4 className="text-base font-black text-black">{p.name}</h4></div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 uppercase">{p.status}</span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">{p.description}</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs mt-4">
-                      <div><span className="text-[10px] text-slate-500 block">Category</span>{p.category}</div>
-                      <div><span className="text-[10px] text-slate-500 block">Budget</span>${Number(p.budget).toLocaleString()}</div>
+                    <p className="text-xs text-gray-600 mt-2">{p.description}</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs mt-4 text-gray-800">
+                      <div><span className="text-[10px] text-gray-400 block font-semibold">Category</span>{p.category}</div>
+                      <div><span className="text-[10px] text-gray-400 block font-semibold">Budget</span>${Number(p.budget).toLocaleString()}</div>
                     </div>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-800 flex justify-end">
-                    <button onClick={() => deleteProject(p.id)} className="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer">
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+                    <button onClick={() => deleteProject(p.id)} className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer">
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </button>
                   </div>
@@ -348,26 +352,26 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
           </div>
         )}
 
-        {/* TIMELINE PROGRESS (NO MILESTONE TEXT) */}
+        {/* TIMELINE PROGRESS */}
         {activeTab === 'phases' && (
           <div className="space-y-4">
-            <div><h3 className="text-xl font-black text-white">Project Progress & Timeline</h3><p className="text-xs text-slate-400">Drag sliders to update phase completion percentage</p></div>
+            <div><h3 className="text-xl font-black text-black">Project Progress & Timeline</h3><p className="text-xs text-gray-600">Drag sliders to update phase completion percentage</p></div>
             <div className="space-y-3">
               {phases.map((ph) => (
-                <div key={ph.id} style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
+                <div key={ph.id} style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] font-mono text-amber-400">Target Date: {ph.due_date}</span>
-                      <h4 className="text-sm font-bold text-white">{ph.name}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{ph.description}</p>
+                      <span className="text-[10px] font-mono text-amber-700 font-bold">Target Date: {ph.due_date}</span>
+                      <h4 className="text-sm font-black text-black mt-0.5">{ph.name}</h4>
+                      <p className="text-xs text-gray-600 mt-0.5">{ph.description}</p>
                     </div>
-                    <span className="text-lg font-black text-amber-400">{ph.completion_pct}%</span>
+                    <span className="text-xl font-black text-amber-700">{ph.completion_pct}%</span>
                   </div>
-                  <div className="mt-3">
-                    <input type="range" min="0" max="100" value={ph.completion_pct} onChange={(e) => updatePhase(ph.id, e.target.value)} className="w-full accent-amber-500 cursor-pointer" />
-                    <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <div className="mt-4">
+                    <input type="range" min="0" max="100" value={ph.completion_pct} onChange={(e) => updatePhase(ph.id, e.target.value)} className="w-full accent-[#facc15] cursor-pointer" />
+                    <div className="flex justify-between text-[11px] text-gray-500 mt-1 font-semibold">
                       <span>Planning (0%)</span>
-                      <span className="text-amber-400 font-semibold">{ph.status}</span>
+                      <span className="text-amber-700 font-bold">{ph.status}</span>
                       <span>Completed (100%)</span>
                     </div>
                   </div>
@@ -381,26 +385,26 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {activeTab === 'resources' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <div><h3 className="text-xl font-black text-white">Heavy Machinery & Fleet</h3><p className="text-xs text-slate-400">Site deployment, operational status, and maintenance</p></div>
-              <button onClick={() => setOpenAssetModal(true)} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer">
+              <div><h3 className="text-xl font-black text-black">Heavy Machinery & Fleet</h3><p className="text-xs text-gray-600">Site deployment, operational status, and maintenance</p></div>
+              <button onClick={() => setOpenAssetModal(true)} className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black text-xs font-black rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer">
                 <Plus className="h-4 w-4" /> Add Asset
               </button>
             </div>
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="overflow-x-auto rounded-2xl border">
-              <table className="w-full text-left text-xs">
-                <thead style={{ backgroundColor: '#090d16' }} className="text-slate-400">
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="overflow-x-auto rounded-2xl border shadow-sm">
+              <table className="w-full text-left text-xs text-gray-800">
+                <thead style={{ backgroundColor: '#fafaf9' }} className="text-gray-500 font-bold border-b border-gray-200">
                   <tr><th className="p-3.5">Asset Name</th><th className="p-3.5">Category</th><th className="p-3.5">Site</th><th className="p-3.5">Quantity</th><th className="p-3.5">Utilization</th><th className="p-3.5">Status</th><th className="p-3.5">Actions</th></tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-gray-100">
                   {resources.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-800/40">
-                      <td className="p-3.5 font-bold text-white">{r.name}</td>
+                    <tr key={r.id} className="hover:bg-yellow-50/50">
+                      <td className="p-3.5 font-bold text-black">{r.name}</td>
                       <td className="p-3.5">{r.category}</td>
                       <td className="p-3.5">Project #{r.project_id}</td>
                       <td className="p-3.5">{r.quantity} Units</td>
-                      <td className="p-3.5 text-amber-400 font-bold">{r.utilization_percentage}%</td>
-                      <td className="p-3.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">{r.status}</span></td>
-                      <td className="p-3.5"><button onClick={() => deleteAsset(r.id)} className="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3.5 w-3.5" /> Delete</button></td>
+                      <td className="p-3.5 text-amber-700 font-black">{r.utilization_percentage}%</td>
+                      <td className="p-3.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{r.status}</span></td>
+                      <td className="p-3.5"><button onClick={() => deleteAsset(r.id)} className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3.5 w-3.5" /> Delete</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -413,25 +417,25 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {activeTab === 'inventory' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <div><h3 className="text-xl font-black text-white">Materials & Stockpile</h3><p className="text-xs text-slate-400">Cement, rebar, and aggregate reserves</p></div>
-              <button onClick={() => setOpenMaterialModal(true)} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer">
+              <div><h3 className="text-xl font-black text-black">Materials & Stockpile</h3><p className="text-xs text-gray-600">Cement, rebar, and aggregate reserves</p></div>
+              <button onClick={() => setOpenMaterialModal(true)} className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black text-xs font-black rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer">
                 <Plus className="h-4 w-4" /> Add Material
               </button>
             </div>
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="overflow-x-auto rounded-2xl border">
-              <table className="w-full text-left text-xs">
-                <thead style={{ backgroundColor: '#090d16' }} className="text-slate-400">
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="overflow-x-auto rounded-2xl border shadow-sm">
+              <table className="w-full text-left text-xs text-gray-800">
+                <thead style={{ backgroundColor: '#fafaf9' }} className="text-gray-500 font-bold border-b border-gray-200">
                   <tr><th className="p-3.5">Material</th><th className="p-3.5">Category</th><th className="p-3.5">Stock</th><th className="p-3.5">Reserve</th><th className="p-3.5">Supplier</th><th className="p-3.5">Actions</th></tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-gray-100">
                   {inventory.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/40">
-                      <td className="p-3.5 font-bold text-white">{item.material_name}</td>
+                    <tr key={item.id} className="hover:bg-yellow-50/50">
+                      <td className="p-3.5 font-bold text-black">{item.material_name}</td>
                       <td className="p-3.5">{item.category}</td>
-                      <td className="p-3.5 font-mono text-amber-400 font-bold">{item.quantity} {item.unit}</td>
-                      <td className="p-3.5 font-mono text-slate-400">{item.minimum_stock} {item.unit}</td>
+                      <td className="p-3.5 font-mono text-black font-black">{item.quantity} {item.unit}</td>
+                      <td className="p-3.5 font-mono text-gray-500">{item.minimum_stock} {item.unit}</td>
                       <td className="p-3.5">{item.supplier}</td>
-                      <td className="p-3.5"><button onClick={() => deleteMaterial(item.id)} className="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3.5 w-3.5" /> Delete</button></td>
+                      <td className="p-3.5"><button onClick={() => deleteMaterial(item.id)} className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3.5 w-3.5" /> Delete</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -443,24 +447,24 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {/* DOCUMENTS VAULT */}
         {activeTab === 'documents' && (
           <div className="space-y-5">
-            <div><h3 className="text-xl font-black text-white">Documents Vault</h3><p className="text-xs text-slate-400">Centralized repository for drawings, purchase orders, and QA logs</p></div>
+            <div><h3 className="text-xl font-black text-black">Documents Vault</h3><p className="text-xs text-gray-600">Centralized repository for drawings, purchase orders, and QA logs</p></div>
 
             {/* Upload Box */}
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border">
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm">
               <form onSubmit={handleUploadDoc} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Choose File</label>
-                  <input type="file" required onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-amber-500 file:text-slate-950 file:font-bold cursor-pointer" />
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Choose File</label>
+                  <input type="file" required onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-[#facc15] file:text-black file:font-bold cursor-pointer" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Category</label>
-                  <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white">
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                  <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="w-full rounded-xl bg-white border border-gray-300 px-3 py-2 text-xs text-black">
                     <option value="Procurement">Procurement</option>
                     <option value="Notifications">Notifications</option>
                     <option value="Reports">Reports</option>
                   </select>
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                <button type="submit" className="w-full py-2.5 bg-[#facc15] hover:bg-yellow-400 text-black font-black rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                   <Upload className="h-4 w-4" /> Upload Document
                 </button>
               </form>
@@ -471,17 +475,17 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
               {['Procurement', 'Notifications', 'Reports'].map((grp) => {
                 const list = documents.filter((d) => d.category === grp);
                 return (
-                  <div key={grp} style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-4 rounded-2xl border space-y-3">
-                    <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">{grp}</h4>
+                  <div key={grp} style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-4 rounded-2xl border shadow-sm space-y-3">
+                    <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider">{grp}</h4>
                     {list.map((doc) => (
-                      <div key={doc.id} style={{ backgroundColor: '#090d16', borderColor: '#1e293b' }} className="p-3 rounded-xl border">
+                      <div key={doc.id} style={{ backgroundColor: '#fafaf9', borderColor: '#e4e4e7' }} className="p-3 rounded-xl border">
                         <div className="flex justify-between items-start">
-                          <div><p className="text-xs font-bold text-white">{doc.title}</p><p className="text-[10px] text-slate-400">{doc.owner} • {doc.fileType}</p></div>
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{doc.status}</span>
+                          <div><p className="text-xs font-black text-black">{doc.title}</p><p className="text-[10px] text-gray-500">{doc.owner} • {doc.fileType}</p></div>
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">{doc.status}</span>
                         </div>
-                        <div className="mt-2.5 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500">{doc.updated}</span>
-                          <button onClick={() => deleteDoc(doc.id)} className="text-rose-400 font-bold hover:underline cursor-pointer">Delete</button>
+                        <div className="mt-2.5 pt-2 border-t border-gray-200 flex justify-between items-center text-[10px]">
+                          <span className="text-gray-400 font-semibold">{doc.updated}</span>
+                          <button onClick={() => deleteDoc(doc.id)} className="text-red-600 font-bold hover:underline cursor-pointer">Delete</button>
                         </div>
                       </div>
                     ))}
@@ -495,10 +499,10 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {/* PROCUREMENT */}
         {activeTab === 'procurement' && (
           <div className="space-y-4">
-            <h3 className="text-xl font-black text-white">Procurement Orders</h3>
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-5 rounded-2xl border flex justify-between items-center">
-              <div><span className="text-[10px] text-amber-400 font-mono">PO #501 • RAW_MATERIALS</span><h4 className="font-bold text-white text-sm">Structural Grade Cement (OPC 53)</h4><p className="text-xs text-slate-400">Qty: 2500 Bags • Supplier: Ultratech Supplies</p></div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">APPROVED</span>
+            <h3 className="text-xl font-black text-black">Procurement Orders</h3>
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-5 rounded-2xl border shadow-sm flex justify-between items-center">
+              <div><span className="text-[10px] text-amber-700 font-mono font-bold">PO #501 • RAW_MATERIALS</span><h4 className="font-bold text-black text-sm mt-0.5">Structural Grade Cement (OPC 53)</h4><p className="text-xs text-gray-500">Qty: 2500 Bags • Supplier: Ultratech Supplies</p></div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">APPROVED</span>
             </div>
           </div>
         )}
@@ -506,16 +510,16 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
         {/* PROFILE */}
         {activeTab === 'profile' && (
           <div className="space-y-4">
-            <h3 className="text-xl font-black text-white">Manager Profile</h3>
-            <div style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }} className="p-6 rounded-2xl border space-y-4">
+            <h3 className="text-xl font-black text-black">Manager Profile</h3>
+            <div style={{ backgroundColor: '#ffffff', borderColor: '#e4e4e7' }} className="p-6 rounded-2xl border shadow-sm space-y-4">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-2xl">R</div>
-                <div><h4 className="text-lg font-black text-white">{currentUser?.name || 'Rohitha Mamidisetti'}</h4><p className="text-sm text-slate-400">rohitha@buildtrack.com</p></div>
+                <div className="h-16 w-16 rounded-2xl bg-[#facc15] flex items-center justify-center text-black font-black text-2xl shadow-md">R</div>
+                <div><h4 className="text-lg font-black text-black">{currentUser?.name || 'Rohitha Mamidisetti'}</h4><p className="text-sm text-gray-600">rohitha@buildtrack.com</p></div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-xs">
-                <div><span className="text-[10px] text-slate-500 block">Role</span>Project Manager</div>
-                <div><span className="text-[10px] text-slate-500 block">Phone</span>+91 98450 77123</div>
-                <div><span className="text-[10px] text-slate-500 block">Status</span>Active (Verified)</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-gray-100 text-xs text-gray-700">
+                <div><span className="text-[10px] text-gray-400 block font-semibold">Role</span>Project Manager</div>
+                <div><span className="text-[10px] text-gray-400 block font-semibold">Phone</span>+91 98450 77123</div>
+                <div><span className="text-[10px] text-gray-400 block font-semibold">Status</span>Active (Verified)</div>
               </div>
             </div>
           </div>
@@ -524,15 +528,15 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
 
       {/* CREATE PROJECT MODAL */}
       {openProjectModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div style={{ backgroundColor: '#0f172a' }} className="w-full max-w-md p-6 rounded-2xl border border-slate-700 space-y-4">
-            <div className="flex justify-between items-center"><h4 className="font-bold text-white">Create New Project</h4><button onClick={() => setOpenProjectModal(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button></div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div style={{ backgroundColor: '#ffffff' }} className="w-full max-w-md p-6 rounded-2xl border border-gray-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center"><h4 className="font-bold text-black">Create New Project</h4><button onClick={() => setOpenProjectModal(false)} className="text-gray-400 hover:text-black cursor-pointer"><X className="h-4 w-4" /></button></div>
             <form onSubmit={handleAddProject} className="space-y-3">
-              <input required placeholder="Project Name" value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <select value={projectForm.category} onChange={(e) => setProjectForm({ ...projectForm, category: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white">{PROJECT_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
-              <input type="number" required placeholder="Budget ($)" value={projectForm.budget} onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <input placeholder="Location" value={projectForm.location} onChange={(e) => setProjectForm({ ...projectForm, location: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer">Create</button></div>
+              <input required placeholder="Project Name" value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <select value={projectForm.category} onChange={(e) => setProjectForm({ ...projectForm, category: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black">{PROJECT_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+              <input type="number" required placeholder="Budget ($)" value={projectForm.budget} onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <input placeholder="Location" value={projectForm.location} onChange={(e) => setProjectForm({ ...projectForm, location: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black font-black rounded-xl text-xs cursor-pointer shadow-sm">Create</button></div>
             </form>
           </div>
         </div>
@@ -540,15 +544,15 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
 
       {/* ADD ASSET MODAL */}
       {openAssetModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div style={{ backgroundColor: '#0f172a' }} className="w-full max-w-md p-6 rounded-2xl border border-slate-700 space-y-4">
-            <div className="flex justify-between items-center"><h4 className="font-bold text-white">Add Machinery Asset</h4><button onClick={() => setOpenAssetModal(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button></div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div style={{ backgroundColor: '#ffffff' }} className="w-full max-w-md p-6 rounded-2xl border border-gray-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center"><h4 className="font-bold text-black">Add Machinery Asset</h4><button onClick={() => setOpenAssetModal(false)} className="text-gray-400 hover:text-black cursor-pointer"><X className="h-4 w-4" /></button></div>
             <form onSubmit={handleAddAsset} className="space-y-3">
-              <input required placeholder="Asset / Machine Name" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <select value={assetForm.category} onChange={(e) => setAssetForm({ ...assetForm, category: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white">{RESOURCE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
-              <input type="number" min="1" required placeholder="Quantity" value={assetForm.quantity} onChange={(e) => setAssetForm({ ...assetForm, quantity: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <input type="number" min="0" max="100" placeholder="Utilization %" value={assetForm.utilization_percentage} onChange={(e) => setAssetForm({ ...assetForm, utilization_percentage: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer">Add Asset</button></div>
+              <input required placeholder="Asset / Machine Name" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <select value={assetForm.category} onChange={(e) => setAssetForm({ ...assetForm, category: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black">{RESOURCE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+              <input type="number" min="1" required placeholder="Quantity" value={assetForm.quantity} onChange={(e) => setAssetForm({ ...assetForm, quantity: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <input type="number" min="0" max="100" placeholder="Utilization %" value={assetForm.utilization_percentage} onChange={(e) => setAssetForm({ ...assetForm, utilization_percentage: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black font-black rounded-xl text-xs cursor-pointer shadow-sm">Add Asset</button></div>
             </form>
           </div>
         </div>
@@ -556,16 +560,16 @@ export const Dashboard = ({ currentUser, onSignOut }) => {
 
       {/* ADD MATERIAL MODAL */}
       {openMaterialModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div style={{ backgroundColor: '#0f172a' }} className="w-full max-w-md p-6 rounded-2xl border border-slate-700 space-y-4">
-            <div className="flex justify-between items-center"><h4 className="font-bold text-white">Add Material Stock</h4><button onClick={() => setOpenMaterialModal(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button></div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div style={{ backgroundColor: '#ffffff' }} className="w-full max-w-md p-6 rounded-2xl border border-gray-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center"><h4 className="font-bold text-black">Add Material Stock</h4><button onClick={() => setOpenMaterialModal(false)} className="text-gray-400 hover:text-black cursor-pointer"><X className="h-4 w-4" /></button></div>
             <form onSubmit={handleAddMaterial} className="space-y-3">
-              <input required placeholder="Material Name" value={materialForm.material_name} onChange={(e) => setMaterialForm({ ...materialForm, material_name: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <select value={materialForm.category} onChange={(e) => setMaterialForm({ ...materialForm, category: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white">{MATERIAL_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
-              <input type="number" required placeholder="Stock Quantity" value={materialForm.quantity} onChange={(e) => setMaterialForm({ ...materialForm, quantity: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <input placeholder="Unit of Measure (Bags, Tons, m³)" value={materialForm.unit} onChange={(e) => setMaterialForm({ ...materialForm, unit: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <input placeholder="Supplier" value={materialForm.supplier} onChange={(e) => setMaterialForm({ ...materialForm, supplier: e.target.value })} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white" />
-              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer">Add Material</button></div>
+              <input required placeholder="Material Name" value={materialForm.material_name} onChange={(e) => setMaterialForm({ ...materialForm, material_name: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <select value={materialForm.category} onChange={(e) => setMaterialForm({ ...materialForm, category: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black">{MATERIAL_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+              <input type="number" required placeholder="Stock Quantity" value={materialForm.quantity} onChange={(e) => setMaterialForm({ ...materialForm, quantity: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <input placeholder="Unit of Measure (Bags, Tons, m³)" value={materialForm.unit} onChange={(e) => setMaterialForm({ ...materialForm, unit: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <input placeholder="Supplier" value={materialForm.supplier} onChange={(e) => setMaterialForm({ ...materialForm, supplier: e.target.value })} className="w-full rounded-xl bg-gray-50 border border-gray-300 px-3 py-2 text-xs text-black" />
+              <div className="flex justify-end pt-2"><button type="submit" className="px-4 py-2 bg-[#facc15] hover:bg-yellow-400 text-black font-black rounded-xl text-xs cursor-pointer shadow-sm">Add Material</button></div>
             </form>
           </div>
         </div>
