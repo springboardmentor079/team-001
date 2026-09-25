@@ -10,7 +10,8 @@ const {
     getProjectReport,
     getProgressReport,
     getResourceReport,
-    getMaterialReport
+    getMaterialReport,
+    getWorkforceReport
 } = require("../controllers/reportController");
 
 
@@ -59,6 +60,15 @@ router.get(
     ),
     getMaterialReport
 );
-
+router.get(
+    "/workforce",
+    verifyToken,
+    allowRoles(
+        "Administrator",
+        "Project Manager",
+        "Site Engineer"
+    ),
+    getWorkforceReport
+);
 
 module.exports = router;

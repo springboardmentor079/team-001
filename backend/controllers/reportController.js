@@ -115,11 +115,38 @@ const getMaterialReport = async (req, res) => {
         });
     }
 };
+const getWorkforceReport = async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT
+                p.id AS project_id,
+                p.name AS project_name,
+                COUNT(DISTINCT wa.worker_id) AS total_workers,
+                COUNT(DISTINCT wa.worker_id)
+                    FILTER (WHERE wa.status = 'ACTIVE') AS active_workers
+            FROM projects p
+            LEFT JOIN workforce_allocations wa
+                ON p.id = wa.project_id
+            GROUP BY p.id, p.name
+            ORDER BY p.id
+        `);
 
+        res.status(200).json(result.rows);
+
+    } catch (error) {
+        console.error("WORKFORCE REPORT ERROR:", error);
+
+        res.status(500).json({
+            message: "Error generating workforce report",
+            error: error.message
+        });
+    }
+};
 
 module.exports = {
     getProjectReport,
     getProgressReport,
     getResourceReport,
-    getMaterialReport
+    getMaterialReport,
+    getWorkforceReport
 };
