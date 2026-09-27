@@ -687,7 +687,7 @@ export const Dashboard = ({ currentUser }) => {
     <div className="min-h-screen w-full bg-[#fcfcfb] text-black flex font-sans">
 
       {/* SIDEBAR */}
-      <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-gray-200 p-4 flex-col justify-between">
+      <aside className="hidden md:flex fixed left-0 top-0 z-40 w-72 h-screen shrink-0 bg-white border-r border-gray-200 p-4 flex-col justify-between overflow-y-auto">
 
         <div>
           <div className="flex items-center gap-3 px-2 py-3 mb-5">
@@ -747,7 +747,7 @@ export const Dashboard = ({ currentUser }) => {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 min-w-0 md:ml-72">
 
         {/* HEADER */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
