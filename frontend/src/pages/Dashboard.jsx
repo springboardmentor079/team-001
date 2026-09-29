@@ -297,7 +297,7 @@ export const Dashboard = ({ currentUser }) => {
       category: 'Notifications',
       owner: 'Site Engineer',
       status: 'Sent',
-      type: 'DOCX',
+      type: 'PDF',
       date: '2026-09-24',
     },
   ]);
@@ -346,6 +346,7 @@ export const Dashboard = ({ currentUser }) => {
   });
 
   const [docFile, setDocFile] = useState(null);
+  const [attendanceSearch, setAttendanceSearch] = useState('');
 
   const showNotice = (message) => {
     setNotice(message);
@@ -387,6 +388,22 @@ export const Dashboard = ({ currentUser }) => {
   const attendanceRate = Math.round(
     (presentCount / employees.length) * 100
   );
+
+  const filteredEmployees = employees.filter((employee) => {
+    const search = attendanceSearch.trim().toLowerCase();
+
+    if (!search) return true;
+
+    return [
+      employee.name,
+      employee.role,
+      employee.date,
+      employee.status,
+      employee.id,
+    ].some((value) =>
+      String(value).toLowerCase().includes(search)
+    );
+  });
 
   const averageUtilization = Math.round(
     resources.reduce(
@@ -555,6 +572,14 @@ export const Dashboard = ({ currentUser }) => {
       return;
     }
 
+    if (
+      docFile.type !== 'application/pdf' &&
+      !docFile.name.toLowerCase().endsWith('.pdf')
+    ) {
+      showNotice('Only PDF files are allowed.');
+      return;
+    }
+
     setDocuments([
       {
         id: Date.now(),
@@ -687,7 +712,7 @@ export const Dashboard = ({ currentUser }) => {
     <div className="min-h-screen w-full bg-[#fcfcfb] text-black flex font-sans">
 
       {/* SIDEBAR */}
-      <aside className="hidden md:flex fixed left-0 top-0 z-40 w-72 h-screen shrink-0 bg-white border-r border-gray-200 p-4 flex-col justify-between overflow-y-auto">
+      <aside className="hidden md:flex fixed left-0 top-0 z-40 w-56 h-screen shrink-0 bg-white border-r border-gray-200 p-4 flex-col justify-between overflow-y-auto">
 
         <div>
           <div className="flex items-center gap-3 px-2 py-3 mb-5">
@@ -747,7 +772,7 @@ export const Dashboard = ({ currentUser }) => {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 min-w-0 md:ml-72">
+      <main className="flex-1 min-w-0 md:ml-56">
 
         {/* HEADER */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
@@ -1094,6 +1119,27 @@ export const Dashboard = ({ currentUser }) => {
 
               </div>
 
+              <div className="bg-white border rounded-2xl p-5">
+
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <h3 className="font-black">Search Attendance</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Search by employee name, ID, role, date or status.
+                    </p>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={attendanceSearch}
+                    onChange={(e) => setAttendanceSearch(e.target.value)}
+                    placeholder="Search employee..."
+                    className="w-full md:w-80 border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-yellow-300"
+                  />
+                </div>
+
+              </div>
+
               <div className="bg-white border rounded-2xl overflow-x-auto">
 
                 <table className="w-full text-sm">
@@ -1120,7 +1166,7 @@ export const Dashboard = ({ currentUser }) => {
 
                   <tbody>
 
-                    {employees.map((employee) => (
+                    {filteredEmployees.map((employee) => (
                       <tr
                         key={employee.id}
                         className="border-b"
@@ -1202,6 +1248,14 @@ export const Dashboard = ({ currentUser }) => {
 
                       </tr>
                     ))}
+
+                    {filteredEmployees.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-gray-500">
+                          No attendance records found.
+                        </td>
+                      </tr>
+                    )}
 
                   </tbody>
 
@@ -1895,6 +1949,7 @@ export const Dashboard = ({ currentUser }) => {
 
                   <input
                     type="file"
+                    accept=".pdf,application/pdf"
                     required
                     onChange={(e) =>
                       setDocFile(
@@ -1904,6 +1959,10 @@ export const Dashboard = ({ currentUser }) => {
                     }
                     className="flex-1 border rounded-xl p-2 text-sm"
                   />
+
+                  <p className="text-xs text-gray-500 md:self-center">
+                    Only PDF files are allowed.
+                  </p>
 
                   <button
                     type="submit"
@@ -2171,7 +2230,7 @@ export const Dashboard = ({ currentUser }) => {
 
             </div>
 
-            <form
+<form
               onSubmit={addAsset}
               className="space-y-3"
             >
