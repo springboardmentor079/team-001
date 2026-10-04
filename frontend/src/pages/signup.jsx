@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, Leaf } from 'lucide-react';
 import { api } from '../services/api';
 
 export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
@@ -59,22 +59,21 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.12),_transparent_28%),linear-gradient(135deg,_#ffffff,_#fff7d6_42%,_#f5f5f5)] text-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white/95 rounded-[26px] shadow-[0_30px_80px_rgba(0,0,0,0.08)] border border-yellow-200 p-8 backdrop-blur-sm">
-        <h1 className="text-xl font-bold text-black mb-1">
-          Build<span className="text-[#facc15]">Track</span>
-        </h1>
-        <h2 className="text-sm text-gray-600 mb-6">Create your project stakeholder account</h2>
+    <div className="min-h-screen bg-[#F7F5F0] text-[#1B4332] flex items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-lg rounded-3xl border border-[#E3DFD5] bg-white p-6 shadow-[0_24px_64px_-24px_rgba(27,67,50,0.2)] sm:p-9">
+        <div className="mb-6 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E2F3EB] text-[#429B72]"><Leaf className="h-6 w-6" /></span><div><h1 className="text-xl font-extrabold text-[#1B4332]">BuildTrack</h1><p className="text-[11px] text-gray-500">Sustainable construction management</p></div></div>
+        <h2 className="text-2xl font-extrabold text-[#1B4332]">Create your account</h2>
+        <p className="mb-6 mt-1 text-sm text-gray-500">Set up your project stakeholder profile.</p>
 
         {error && (
-          <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+          <div role="alert" className="flex items-center gap-2 rounded-xl border border-[#D97757]/30 bg-[#F8EBE7] p-3 mb-4 text-xs text-[#9B4D37]">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
+          <div role="status" className="flex items-center gap-2 rounded-xl border border-[#52B788]/30 bg-[#E2F3EB] p-3 mb-4 text-xs text-[#1B4332]">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{success}</span>
           </div>
@@ -82,38 +81,38 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
 
         <form onSubmit={handleCreateAccount} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Full Name*</label>
+            <label className="mb-1 block text-sm font-semibold text-[#1B4332]">Full name*</label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="e.g. Alex Rivera"
               disabled={loading}
-              className="w-full bg-white border border-yellow-200 rounded-xl px-3.5 py-2.5 text-xs text-black placeholder:text-gray-500 focus:outline-none focus:border-[#facc15] focus:ring-2 focus:ring-yellow-200"
+              className="w-full rounded-xl border border-[#E3DFD5] bg-white px-3.5 py-3 text-sm text-[#1B4332] placeholder:text-gray-400 focus:border-[#52B788] focus:outline-none focus:ring-2 focus:ring-[#52B788]/20"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Work Email*</label>
+            <label className="mb-1 block text-sm font-semibold text-[#1B4332]">Work email*</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@buildtrack.io"
               disabled={loading}
-              className="w-full bg-white border border-yellow-200 rounded-xl px-3.5 py-2.5 text-xs text-black placeholder:text-gray-500 focus:outline-none focus:border-[#facc15] focus:ring-2 focus:ring-yellow-200"
+              className="w-full rounded-xl border border-[#E3DFD5] bg-white px-3.5 py-3 text-sm text-[#1B4332] placeholder:text-gray-400 focus:border-[#52B788] focus:outline-none focus:ring-2 focus:ring-[#52B788]/20"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Assigned Role*</label>
+            <label className="mb-1 block text-sm font-semibold text-[#1B4332]">Assigned role*</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               disabled={loading}
-              className="w-full bg-white border border-yellow-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 font-semibold focus:outline-none focus:border-[#facc15] focus:ring-2 focus:ring-yellow-200"
+              className="w-full rounded-xl border border-[#E3DFD5] bg-white px-3.5 py-3 text-sm font-semibold text-[#1B4332] focus:border-[#52B788] focus:outline-none focus:ring-2 focus:ring-[#52B788]/20"
             >
               <option value="Project Manager">Project Manager</option>
               <option value="Site Engineer">Site Engineer</option>
@@ -124,20 +123,21 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Password*</label>
+            <label className="mb-1 block text-sm font-semibold text-[#1B4332]">Password*</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="w-full bg-white border border-yellow-200 rounded-xl px-3.5 py-2.5 text-xs text-black placeholder:text-gray-500 focus:outline-none focus:border-[#facc15] focus:ring-2 focus:ring-yellow-200 pr-10"
+                className="w-full rounded-xl border border-[#E3DFD5] bg-white px-3.5 py-3 pr-10 text-sm text-[#1B4332] focus:border-[#52B788] focus:outline-none focus:ring-2 focus:ring-[#52B788]/20"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-gray-500 hover:text-black"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-3 text-gray-500 hover:text-[#1B4332]"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -147,7 +147,7 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-[#facc15] hover:bg-[#fcd34d] text-black font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_14px_28px_rgba(250,204,21,0.22)]"
+            className="w-full rounded-xl bg-[#1B4332] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#2D664D] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -160,12 +160,12 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
           </button>
         </form>
 
-        <div className="mt-4 text-xs text-gray-700 text-center">
+        <div className="mt-5 text-center text-sm text-gray-600">
           Already registered?{' '}
           <button
             type="button"
             onClick={onNavigateToLogin}
-            className="text-[#f59e0b] hover:underline font-bold cursor-pointer"
+            className="font-bold text-[#429B72] underline-offset-2 hover:underline"
           >
             Sign in
           </button>

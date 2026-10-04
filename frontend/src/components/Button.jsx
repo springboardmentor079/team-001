@@ -1,12 +1,12 @@
 import React from 'react';
 
 export const Button = ({ children, variant = 'primary', className = '', ...props }) => {
-  const baseStyles = 'px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer';
+  const baseStyles = 'px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60';
   const variants = {
-    primary: 'bg-[#facc15] hover:bg-[#fcd34d] text-[#111111] shadow-[0_14px_28px_rgba(250,204,21,0.28)]',
-    secondary: 'bg-[#111111] hover:bg-[#1a1a1a] text-[#fffdf5] border border-[#111111]',
-    outline: 'border border-[#facc15]/70 text-[#111111] bg-[#fffdf5] hover:bg-[#fef3c7]',
-    danger: 'bg-red-500/15 hover:bg-red-500/25 text-red-100 border border-red-400/50 shadow-[0_0_0_1px_rgba(248,113,113,0.2)]',
+    primary: 'bg-[#1B4332] hover:bg-[#2D664D] text-white shadow-[0_8px_20px_rgba(27,67,50,0.16)]',
+    secondary: 'bg-white hover:bg-[#F7F5F0] text-[#1B4332] border border-[#E3DFD5]',
+    outline: 'border border-[#52B788]/60 text-[#1B4332] bg-white hover:bg-[#E2F3EB]',
+    danger: 'bg-[#F8EBE7] hover:bg-[#f2d9d1] text-[#9B4D37] border border-[#D97757]/30',
   };
 
   return (

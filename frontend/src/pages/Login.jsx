@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HardHat, Mail, Lock, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { Leaf, Mail, Lock, AlertCircle, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '../components/Button';
 import { api } from '../services/api';
 
@@ -35,102 +35,37 @@ export const Login = ({ onLoginSuccess, onNavigateToSignup }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: 'radial-gradient(circle at top, rgba(250, 204, 21, 0.18), transparent 28%), linear-gradient(135deg, #ffffff 0%, #fff7d6 42%, #f5f5f5 100%)', color: '#111111' }}>
-      <div className="w-full max-w-[1180px] rounded-[30px] border border-yellow-200 bg-white/95 p-5 sm:p-7 shadow-[0_30px_80px_rgba(0,0,0,0.08)] backdrop-blur-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-6 space-y-6 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-yellow-300 bg-[#facc15] text-black shadow-[0_10px_22px_rgba(250,204,21,0.28)]">
-                <HardHat className="h-7 w-7 stroke-[2.5]" />
-              </div>
-              <div>
-                <h1 className="text-[2rem] font-black tracking-[-0.06em] leading-none text-black">
-                  Build<span className="text-[#facc15]">Track</span>
-                </h1>
-                <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-600">
-                  Construction Management Platform
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-[2.8rem] font-black leading-[0.95] tracking-[-0.06em] text-black">
-                Enterprise Field Ops & <br />
-                <span className="text-[#f59e0b]">Milestone Governance</span>
-              </h2>
-              <p className="text-[12px] font-medium leading-relaxed text-gray-700">
-                Role-based access for Project Managers, Site Engineers, Workers, Clients, and Administrators.
-              </p>
-            </div>
+    <div className="flex min-h-screen items-center justify-center bg-[#F7F5F0] p-4 sm:p-8">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-[0_24px_64px_-24px_rgba(27,67,50,0.24)] lg:min-h-[640px] lg:grid-cols-2">
+        <section className="relative flex flex-col justify-between overflow-hidden bg-[#1B4332] p-7 text-white sm:p-10 lg:p-12">
+          <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full border border-white/10" />
+          <div className="absolute -bottom-16 -right-8 h-56 w-56 rounded-full border border-white/10" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E2F3EB]/15 text-[#52B788]"><Leaf className="h-6 w-6" /></span>
+            <div><h1 className="text-xl font-extrabold text-white">BuildTrack</h1><p className="text-[11px] text-[#E3DFD5]">Sustainable construction management</p></div>
           </div>
-
-          <div className="lg:col-span-6 pt-3">
-            <div className="rounded-[22px] border border-yellow-200 bg-[#fffdf7] p-5 sm:p-6 shadow-[0_18px_34px_rgba(0,0,0,0.06)]">
-              <h3 className="mb-5 text-[2rem] font-black tracking-[-0.06em] text-black">Sign In to Workspace</h3>
-
-              {error && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] font-semibold text-red-700">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-[12px] font-bold text-gray-800">Work Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-gray-500" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@buildtrack.io"
-                      required
-                      disabled={loading}
-                      className="w-full rounded-[12px] border border-yellow-200 bg-white py-2.5 pl-10 pr-3 text-[12px] text-black placeholder:text-gray-500 focus:border-[#facc15] focus:outline-none focus:ring-2 focus:ring-yellow-200"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[12px] font-bold text-gray-800">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-3 h-4 w-4 text-gray-500" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      required
-                      disabled={loading}
-                      className="w-full rounded-[12px] border border-yellow-200 bg-white py-2.5 pl-10 pr-3 text-[12px] text-black placeholder:text-gray-500 focus:border-[#facc15] focus:outline-none focus:ring-2 focus:ring-yellow-200"
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" variant="primary" className="w-full py-3 text-[15px] cursor-pointer" disabled={loading}>
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Authenticating...
-                    </span>
-                  ) : (
-                    'Authenticate & Enter'
-                  )}
-                </Button>
-              </form>
-
-              <div className="mt-5 text-center">
-                <p className="text-[12px] text-gray-700">
-                  Don't have an account?{' '}
-                  <button type="button" onClick={onNavigateToSignup} className="font-bold text-[#f59e0b] underline-offset-2 hover:underline cursor-pointer">
-                    Register here
-                  </button>
-                </p>
-              </div>
-            </div>
+          <div className="relative my-12 lg:my-0">
+            <p className="mb-4 text-xs font-bold uppercase text-[#91CFAE]">Field operations, connected</p>
+            <h2 className="max-w-md text-3xl font-extrabold leading-tight text-white sm:text-4xl">Build safer. Build better.</h2>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-[#E3DFD5]">Bring project progress, people, materials, and site updates into one clear workspace.</p>
           </div>
-        </div>
+          <div className="relative flex items-center gap-3 border-t border-white/15 pt-5 text-xs text-[#E3DFD5]"><ShieldCheck className="h-4 w-4 text-[#52B788]" /><span>One workspace for every stage of the build.</span></div>
+        </section>
+
+        <section className="flex items-center justify-center p-6 sm:p-10 lg:p-12">
+          <div className="w-full max-w-md">
+            <p className="text-xs font-bold uppercase text-[#429B72]">Welcome back</p>
+            <h3 className="mt-2 text-2xl font-extrabold text-[#1B4332] sm:text-3xl">Sign in to your workspace</h3>
+            <p className="mt-2 text-sm text-gray-500">Use your registered account to continue.</p>
+            {error && <div role="alert" className="mt-6 flex items-center gap-2 rounded-xl border border-[#D97757]/30 bg-[#F8EBE7] p-3 text-sm font-semibold text-[#9B4D37]"><AlertCircle className="h-4 w-4 shrink-0" /><span>{error}</span></div>}
+            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              <div><label className="mb-2 block text-sm font-semibold text-[#1B4332]" htmlFor="login-email">Work email</label><div className="relative"><Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" required disabled={loading} autoComplete="email" className="w-full rounded-xl border border-[#E3DFD5] bg-white py-3 pl-10 pr-3 text-sm text-[#1B4332] outline-none transition focus:border-[#52B788] focus:ring-2 focus:ring-[#52B788]/20" /></div></div>
+              <div><label className="mb-2 block text-sm font-semibold text-[#1B4332]" htmlFor="login-password">Password</label><div className="relative"><Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required disabled={loading} autoComplete="current-password" className="w-full rounded-xl border border-[#E3DFD5] bg-white py-3 pl-10 pr-3 text-sm text-[#1B4332] outline-none transition focus:border-[#52B788] focus:ring-2 focus:ring-[#52B788]/20" /></div></div>
+              <Button type="submit" variant="primary" className="w-full py-3 text-sm" disabled={loading}>{loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : <>Sign in <ArrowRight className="h-4 w-4" /></>}</Button>
+            </form>
+            <p className="mt-7 text-center text-sm text-gray-600">New to BuildTrack? <button type="button" onClick={onNavigateToSignup} className="font-bold text-[#429B72] underline-offset-2 hover:underline">Create an account</button></p>
+          </div>
+        </section>
       </div>
     </div>
   );

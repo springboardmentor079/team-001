@@ -52,10 +52,10 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F5F0] font-sans text-[#1B4332]">
         <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold" style={{ color: '#4b5563', letterSpacing: '0.08em' }}>Preparing your workspace...</p>
+          <div className="h-8 w-8 border-2 border-[#52B788] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-gray-500">Preparing your workspace...</p>
         </div>
       </div>
     );
@@ -82,7 +82,7 @@ export default function App() {
 
   // Authenticated workspace: Dashboard owns the single workspace header.
   return (
-    <div className="min-h-screen flex flex-col font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
+    <div className="min-h-screen flex flex-col bg-[#F7F5F0] font-sans text-[#1B4332]">
       <Dashboard currentUser={currentUser} onLogout={handleLogout} />
     </div>
   );

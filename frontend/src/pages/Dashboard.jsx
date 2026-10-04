@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api';
+const ReportPieCard = lazy(() => import('../components/ReportPieCard'));
 import {
   Activity,
   BarChart3,
@@ -11,7 +12,9 @@ import {
   FolderKanban,
   FolderOpen,
   Layers,
+  Leaf,
   LogOut,
+  Menu,
   Plus,
   ShoppingCart,
   SlidersHorizontal,
@@ -42,6 +45,7 @@ export const Dashboard = ({ currentUser, onLogout }) => {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [notice, setNotice] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [projects, setProjects] = useState([]);
   const [projectManagers, setProjectManagers] = useState([]);
@@ -1065,6 +1069,21 @@ export const Dashboard = ({ currentUser, onLogout }) => {
   };
 
   const PROJECT_CATEGORIES = [...new Set(projects.map((p) => p.category).filter(Boolean))];
+  const groupForPie = (items, getLabel) => {
+    const counts = new Map();
+    items.forEach((item) => {
+      const label = String(getLabel(item) || 'Other').replaceAll('_', ' ');
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return [...counts].map(([name, value]) => ({ name, value }));
+  };
+  const projectStatusData = groupForPie(projects, (project) => project.status);
+  const phaseProgressData = groupForPie(phases, (phase) => {
+    const progress = Number(phase.completion_pct || 0);
+    return progress >= 100 ? 'Completed' : progress > 0 ? 'In progress' : 'Not started';
+  });
+  const resourceStatusData = groupForPie(resources, (resource) => resource.status);
+  const inventoryStatusData = groupForPie(inventory, (item) => item.stock_status || (Number(item.quantity || 0) <= 0 ? 'OUT_OF_STOCK' : Number(item.quantity || 0) <= Number(item.minimum_stock || 0) ? 'LOW_STOCK' : 'AVAILABLE'));
   const navItems = [
     { id: 'overview', label: 'Dashboard', icon: Activity },
     { id: 'projects', label: `Projects (${projects.length})`, icon: FolderKanban },
@@ -1086,7 +1105,8 @@ export const Dashboard = ({ currentUser, onLogout }) => {
   }, [roleTabs, activeTab]);
 
   return (
-    <div className="min-h-screen w-full bg-[#fcfcfb] text-black flex font-sans">
+    <div className="bt-workspace min-h-screen w-full flex font-sans">
+      {mobileNavOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-[#0F2A1F]/45 backdrop-blur-sm md:hidden" onClick={() => setMobileNavOpen(false)} />}
       {loadError && (
         <div role="alert" className="fixed top-3 left-1/2 -translate-x-1/2 z-50 max-w-[min(90vw,48rem)] rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">{loadError}</div>
       )}
@@ -1095,23 +1115,22 @@ export const Dashboard = ({ currentUser, onLogout }) => {
       )}
 
       {/* SIDEBAR */}
-      <aside className="hidden md:flex fixed left-0 top-0 z-40 w-56 h-screen shrink-0 bg-white border-r border-gray-200 p-4 flex-col justify-between overflow-y-auto">
+      <aside className={`${mobileNavOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 h-screen shrink-0 bg-[#1B4332] p-4 text-white flex-col justify-between overflow-y-auto shadow-xl shadow-[#1B4332]/15 md:flex md:w-64`}>
 
         <div>
           <div className="flex items-center gap-3 px-2 py-3 mb-5">
-            <div className="h-11 w-11 rounded-xl bg-yellow-400 flex items-center justify-center text-xl">
-              🏗️
-            </div>
+            <div className="h-11 w-11 rounded-xl bg-[#E2F3EB]/15 flex items-center justify-center text-[#52B788]"><Leaf className="h-6 w-6" /></div>
 
             <div>
               <h1 className="text-lg font-black">
                 BuildTrack
               </h1>
 
-              <p className="text-[10px] text-gray-500">
-                Construction PM
+              <p className="text-[10px] text-[#D6E3DA]">
+                Sustainable site operations
               </p>
             </div>
+            <button aria-label="Close navigation" className="ml-auto rounded-lg p-2 text-[#E3DFD5] hover:bg-[#2D664D] md:hidden" onClick={() => setMobileNavOpen(false)}><X className="h-4 w-4" /></button>
           </div>
 
           <div className="space-y-1">
@@ -1122,12 +1141,12 @@ export const Dashboard = ({ currentUser, onLogout }) => {
                 <button
                   key={item.id}
                   onClick={() =>
-                    setActiveTab(item.id)
+                    { setActiveTab(item.id); setMobileNavOpen(false); }
                   }
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left text-sm font-bold transition ${
                     activeTab === item.id
-                      ? 'bg-yellow-400 text-black'
-                      : 'text-gray-600 hover:bg-yellow-50 hover:text-black'
+                      ? 'bg-[#2D664D] text-white'
+                      : 'text-[#E3DFD5] hover:bg-[#2D664D]/60 hover:text-white'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -1138,8 +1157,8 @@ export const Dashboard = ({ currentUser, onLogout }) => {
           </div>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-          <p className="text-[10px] text-gray-500">
+        <div className="bg-[#0F2A1F]/50 border border-[#2D664D] rounded-2xl p-4">
+          <p className="text-[10px] text-[#D6E3DA]">
             Logged in as
           </p>
 
@@ -1147,27 +1166,25 @@ export const Dashboard = ({ currentUser, onLogout }) => {
             {profile?.name || currentUser?.name || '—'}
           </p>
 
-          <p className="text-[10px] text-yellow-700 font-bold">
+          <p className="text-[10px] text-[#91CFAE] font-bold">
             {profile?.role || currentUser?.role || '—'}
           </p>
         </div>
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 min-w-0 md:ml-56">
+      <main className="flex-1 min-w-0 md:ml-64">
 
         {/* HEADER */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+        <header className="bg-[#F7F5F0]/95 border-b border-[#E3DFD5] px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur">
 
-          <div>
-            <h2 className="text-xl font-black">
-              BuildTrack
+          <div className="flex items-center gap-3">
+            <button aria-label="Open navigation" className="rounded-xl p-2 text-[#1B4332] hover:bg-[#EFECE5] md:hidden" onClick={() => setMobileNavOpen(true)}><Menu className="h-5 w-5" /></button>
+            <div><h2 className="text-lg sm:text-xl font-extrabold text-[#1B4332]">
+              Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {(profile?.name || currentUser?.name || 'there').split(' ')[0]}
             </h2>
 
-            <p className="text-xs text-gray-500">
-              Project management, attendance, procurement,
-              reports and analytics
-            </p>
+            <p className="text-xs text-gray-500">Here is today's site overview.</p></div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -1176,14 +1193,14 @@ export const Dashboard = ({ currentUser, onLogout }) => {
                 {profile?.name || currentUser?.name || '—'}
               </p>
 
-              <span className="text-[10px] bg-yellow-100 px-2 py-1 rounded font-bold">
+              <span className="text-[10px] bg-[#E2F3EB] text-[#1B4332] px-2 py-1 rounded font-bold">
                 {profile?.role || currentUser?.role || '—'}
               </span>
             </div>
 
             <button
               onClick={() => onLogout?.()}
-              className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold flex items-center gap-2"
+              className="px-4 py-2 bg-[#1B4332] hover:bg-[#2D664D] text-white rounded-xl text-xs font-bold flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -2477,6 +2494,15 @@ export const Dashboard = ({ currentUser, onLogout }) => {
                 <h2 className="text-2xl font-black">Reports</h2>
                 <p className="text-sm text-gray-500">View project and operational reports.</p>
               </div>
+
+              <Suspense fallback={<div className="grid min-h-56 place-items-center text-sm text-gray-500">Loading report charts...</div>}>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <ReportPieCard title="Projects by status" description="Current project portfolio" data={projectStatusData} />
+                  <ReportPieCard title="Phase progress" description="Completion status across project phases" data={phaseProgressData} />
+                  <ReportPieCard title="Equipment availability" description="Resources grouped by current status" data={resourceStatusData} />
+                  <ReportPieCard title="Material stock" description="Inventory grouped by stock health" data={inventoryStatusData} />
+                </div>
+              </Suspense>
 
               <div className="bg-white border rounded-2xl p-5">
                 <label className="text-xs font-bold text-gray-500">Project for project-specific reports</label>
