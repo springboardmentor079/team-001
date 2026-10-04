@@ -32,11 +32,9 @@ const getDashboardAnalytics = async (req, res) => {
       db.query(`
         SELECT
           COUNT(*) AS total,
-          COALESCE(AVG(utilization_percentage), 0)
-            AS average_utilization,
           COUNT(*) FILTER (WHERE status = 'AVAILABLE')
             AS available,
-          COUNT(*) FILTER (WHERE status = 'MAINTENANCE')
+          COUNT(*) FILTER (WHERE status = 'UNDER_MAINTENANCE')
             AS maintenance
         FROM resources
       `),
@@ -78,7 +76,6 @@ const getDashboardAnalytics = async (req, res) => {
         WHERE role IN (
           'Engineer',
           'Supervisor',
-          'Contractor',
           'Skilled Worker',
           'Unskilled Worker',
           'Consultant'

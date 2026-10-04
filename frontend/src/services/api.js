@@ -43,22 +43,13 @@ async function request(endpoint, options = {}) {
     ...(options.headers || {}),
   };
 
-  const urls = [];
-  if (API_BASE_URL) urls.push(`${API_BASE_URL}${endpoint}`);
-  if (endpoint.startsWith('/api')) urls.push(endpoint);
-
+  const url = `${API_BASE_URL}${endpoint}`;
   let response;
-  let lastError;
-  for (const url of [...new Set(urls)]) {
-    try {
-      response = await fetch(url, { ...options, headers });
-      break;
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (error) {
+    throw new Error('Unable to connect right now. Check your connection and try again.');
   }
-
-  if (!response) throw new Error(lastError?.message || 'Unable to connect to BuildTrack backend.');
 
   const contentType = response.headers.get('content-type') || '';
   let data = null;
@@ -100,6 +91,7 @@ export const api = {
   getProfile: () => get('/api/profile'),
 
   getProjects: () => get('/api/projects'),
+  getProjectManagers: () => get('/api/admin/project-managers'),
   getProjectById: (id) => get(`/api/projects/${id}`),
   createProject: (body) => post('/api/projects', body),
   updateProject: (id, body) => put(`/api/projects/${id}`, body),
@@ -113,6 +105,7 @@ export const api = {
   deleteProgress: (id) => del(`/api/progress/${id}`),
 
   getWorkers: () => get('/api/worker'),
+  getSiteEngineers: () => get('/api/site-engineers'),
   getWorkerById: (id) => get(`/api/worker/${id}`),
   createWorker: (body) => post('/api/worker', body),
   updateWorker: (id, body) => put(`/api/worker/${id}`, body),
@@ -134,6 +127,7 @@ export const api = {
   getProcurementById: (id) => get(`/api/procurement/${id}`),
   createProcurement: (body) => post('/api/procurement', body),
   updateProcurement: (id, body) => put(`/api/procurement/${id}`, body),
+  updateProcurementStatus: (id, status) => patch(`/api/procurement/${id}/status`, { status }),
   deleteProcurement: (id) => del(`/api/procurement/${id}`),
 
   getResources: (page = 1, limit = 100) => get(`/api/resources?page=${page}&limit=${limit}`),
@@ -167,14 +161,20 @@ export const api = {
   deletePayroll: (id) => del(`/api/payroll/${id}`),
 
   getNotifications: () => get('/api/notifications'),
+  getNotificationById: (id) => get(`/api/notifications/${id}`),
   updateNotification: (id, body) => put(`/api/notifications/${id}`, body),
   createNotification: (body) => post('/api/notifications', body),
   deleteNotification: (id) => del(`/api/notifications/${id}`),
 
-  getProjectReport: () => get('/api/reports/projects'),
-  getProgressReport: () => get('/api/reports/progress'),
-  getResourceReport: () => get('/api/reports/resources'),
-  getMaterialReport: () => get('/api/reports/materials'),
+  getAnalyticalReport: () => get('/api/reports/analytical'),
+  getProjectReport: (projectId) => get(`/api/reports/project/${projectId}`),
+  getProgressReport: (projectId) => get(`/api/reports/progress/${projectId}`),
+  getResourceReport: (projectId) => get(`/api/reports/resources/${projectId}`),
+  getInventoryReport: (projectId) => get(`/api/reports/inventory/${projectId}`),
+  getProcurementReport: (projectId) => get(`/api/reports/procurement/${projectId}`),
+  getWorkforceReport: (projectId) => get(`/api/reports/workforce/${projectId}`),
+  getAttendanceReport: (projectId) => get(`/api/reports/attendance/${projectId}`),
+  getDashboardAnalytics: () => get('/api/analytics/dashboard'),
 
   getDocuments: () => get('/api/documents'),
   uploadDocument: (formData) => request('/api/documents/upload', { method: 'POST', body: formData }),

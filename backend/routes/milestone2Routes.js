@@ -13,7 +13,7 @@ router.get("/material-allocations", verifyToken, c.list("material_allocations"))
 router.post("/material-allocations", verifyToken, c.createMaterialAllocation);
 router.delete("/material-allocations/:id", verifyToken, c.deleteMaterialAllocation);
 
-router.get("/workforce-allocations", verifyToken, c.list("workforce_allocations"));
+router.get("/workforce-allocations", verifyToken, c.getWorkforceAllocations);
 router.post("/workforce-allocations", verifyToken, allowRoles("Administrator", "Project Manager"), c.createWorkforceAllocation);
 router.put("/workforce-allocations/:id", verifyToken, allowRoles("Administrator", "Project Manager"), c.updateWorkforceAllocation);
 router.delete("/workforce-allocations/:id", verifyToken, allowRoles("Administrator", "Project Manager"), c.deleteWorkforceAllocation);

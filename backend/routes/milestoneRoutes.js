@@ -20,7 +20,6 @@ router.post(
     verifyToken,
     allowRoles(
         "Administrator",
-        "Project Manager",
         "Site Engineer"
     ),
     createProgress
@@ -56,7 +55,6 @@ router.put(
     verifyToken,
     allowRoles(
         "Administrator",
-        "Project Manager",
         "Site Engineer"
     ),
     updateProgress
@@ -68,7 +66,7 @@ router.delete(
     verifyToken,
     allowRoles(
         "Administrator",
-        "Project Manager"
+        "Site Engineer"
     ),
     deleteProgress
 );

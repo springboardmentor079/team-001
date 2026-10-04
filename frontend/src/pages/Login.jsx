@@ -9,20 +9,7 @@ export const Login = ({ onLoginSuccess, onNavigateToSignup }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const personas = [
-    { role: 'Project Manager', name: 'Rohitha Mamidisetti', email: 'rohitha.pm@buildtrack.io' },
-    { role: 'Site Engineer', name: 'Dave K.', email: 'dave.eng@buildtrack.io' },
-    { role: 'Contractor', name: 'Elena Ramos', email: 'elena.cont@buildtrack.io' },
-    { role: 'Administrator', name: 'System Admin', email: 'admin@buildtrack.io' },
-    { role: 'Site Worker', name: 'Sam Wilson', email: 'sam.worker@buildtrack.io' },
-    { role: 'Client / Investor', name: 'Apex Holdings', email: 'investor@apexcap.com' },
-  ];
 
-  const handleSelectPersona = (persona) => {
-    setEmail(persona.email);
-    setPassword('Password123!');
-    setError('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,29 +24,13 @@ export const Login = ({ onLoginSuccess, onNavigateToSignup }) => {
       const response = await api.login({ email, password });
       if (onLoginSuccess && response?.user) {
         onLoginSuccess(response.user, response.token);
-        return;
+      } else {
+        setError('Unable to sign in. Please try again.');
       }
     } catch (err) {
-      console.warn('Backend login fallback engaged:', err.message);
+      setError(err.message || 'Unable to sign in right now. Please try again.');
     } finally {
       setLoading(false);
-    }
-
-    // Graceful fallback to guarantee both team members and evaluators can always enter the app!
-    const matchedPersona = personas.find(p => p.email.toLowerCase() === email.toLowerCase());
-    const fallbackUser = {
-      id: Date.now(),
-      name: matchedPersona ? matchedPersona.name : 'Rohitha Mamidisetti',
-      email: email,
-      role: matchedPersona ? matchedPersona.role.toLowerCase().replace(/\s+/g, '_') : 'project_manager',
-    };
-    const fallbackToken = 'demo-jwt-token-' + Date.now();
-
-    localStorage.setItem('user', JSON.stringify(fallbackUser));
-    localStorage.setItem('token', fallbackToken);
-
-    if (onLoginSuccess) {
-      onLoginSuccess(fallbackUser, fallbackToken);
     }
   };
 
@@ -88,34 +59,8 @@ export const Login = ({ onLoginSuccess, onNavigateToSignup }) => {
                 <span className="text-[#f59e0b]">Milestone Governance</span>
               </h2>
               <p className="text-[12px] font-medium leading-relaxed text-gray-700">
-                Multi-role access for Project Managers, Site Engineers, Contractors, Workers, and Administrators.
+                Role-based access for Project Managers, Site Engineers, Workers, Clients, and Administrators.
               </p>
-            </div>
-
-            <div className="space-y-3 rounded-[18px] bg-[#fff7d6] p-3.5 border border-yellow-200">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-[12px] font-bold text-black">
-                  <Sparkles className="h-4 w-4 text-[#f59e0b]" />
-                  <span>1-Click Persona Credentials Fill</span>
-                </div>
-                <span className="rounded-full border border-yellow-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
-                  6 Roles
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {personas.map((p) => (
-                  <button
-                    key={p.email}
-                    type="button"
-                    onClick={() => handleSelectPersona(p)}
-                    className="rounded-[12px] bg-[#fffdf7] px-3 py-3 text-left border border-yellow-200 shadow-[0_10px_18px_rgba(0,0,0,0.04)] transition-transform hover:-translate-y-0.5 hover:border-[#facc15] cursor-pointer"
-                  >
-                    <p className="text-[12px] font-bold text-black leading-tight">{p.role}</p>
-                    <p className="mt-1 text-[11px] font-medium text-gray-700">{p.name}</p>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 

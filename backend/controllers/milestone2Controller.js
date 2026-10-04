@@ -1,5 +1,7 @@
 const db = require("../db");
 
+const isWorkerRole = (role) => role === "Worker" || role === "Site Worker";
+
 const simpleError = (res, error, message) => {
   console.error(message, error);
   return res.status(500).json({ message, error: error.message });
@@ -62,13 +64,74 @@ const deleteMaterialAllocation = async (req, res) => {
   } catch (e) { simpleError(res, e, "Error deleting material allocation"); }
 };
 
+const getWorkforceAllocations = async (req, res) => {
+  try {
+    if (isWorkerRole(req.user.role)) {
+      const result = await db.query(
+        `SELECT * FROM workforce_allocations
+         WHERE worker_id=$1
+         ORDER BY start_date DESC, id DESC`,
+        [req.user.id]
+      );
+      return res.json(result.rows);
+    }
+
+    if (req.user.role !== "Site Engineer") {
+      const result = await db.query("SELECT * FROM workforce_allocations ORDER BY id DESC");
+      return res.json(result.rows);
+    }
+
+    const result = await db.query(
+      `SELECT allocation.*
+       FROM workforce_allocations allocation
+       WHERE allocation.project_id IN (
+         SELECT assignment.project_id
+         FROM workforce_allocations assignment
+         WHERE assignment.worker_id = $1
+           AND UPPER(BTRIM(assignment.status)) = 'ACTIVE'
+       )
+       AND (
+         UPPER(BTRIM(allocation.role)) <> 'SITE ENGINEER'
+         OR allocation.worker_id = $1
+       )
+       ORDER BY allocation.id DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (e) { simpleError(res, e, "Error fetching workforce allocations"); }
+};
+
 const createWorkforceAllocation = async (req, res) => {
   try {
     const { worker_id, project_id, role, start_date, end_date = null, status = "ACTIVE" } = req.body;
-    const worker = await db.query("SELECT id FROM users WHERE id=$1 AND role='Worker'", [worker_id]);
-    if (!worker.rows.length) return res.status(400).json({ message: "Worker not found" });
+    const assignedUser = await db.query(
+      "SELECT id, role FROM users WHERE id=$1 AND role IN ('Worker', 'Site Engineer') AND is_active=true",
+      [worker_id]
+    );
+    if (!assignedUser.rows.length) return res.status(400).json({ message: "Select an active Worker or Site Engineer." });
+    const isSiteEngineer = assignedUser.rows[0].role === "Site Engineer";
+    if (isSiteEngineer && role !== "Site Engineer") {
+      return res.status(400).json({ message: "Site Engineer assignments must use the Site Engineer workforce role." });
+    }
+    if (!isSiteEngineer && role === "Site Engineer") {
+      return res.status(400).json({ message: "Only a Site Engineer account can use the Site Engineer workforce role." });
+    }
+    if (req.user.role === "Project Manager") {
+      const project = await db.query(
+        "SELECT id FROM projects WHERE id=$1 AND manager_id=$2",
+        [project_id, req.user.id]
+      );
+      if (!project.rows.length) return res.status(403).json({ message: "You can only assign staff to your own projects." });
+    }
+    const existingAssignment = await db.query(
+      "SELECT id FROM workforce_allocations WHERE worker_id=$1 AND project_id=$2 AND status='ACTIVE'",
+      [worker_id, project_id]
+    );
+    if (existingAssignment.rows.length) {
+      return res.status(409).json({ message: "This user is already actively assigned to the selected project." });
+    }
     const result = await db.query(`INSERT INTO workforce_allocations (worker_id,project_id,role,start_date,end_date,status) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [worker_id, project_id, role, start_date, end_date, status]);
-    res.status(201).json({ message: "Worker allocated", allocation: result.rows[0] });
+    res.status(201).json({ message: isSiteEngineer ? "Site Engineer assigned" : "Worker allocated", allocation: result.rows[0] });
   } catch (e) { simpleError(res, e, "Error creating workforce allocation"); }
 };
 
@@ -76,6 +139,36 @@ const updateWorkforceAllocation = async (req, res) => {
   try {
     const fields = ["project_id","role","start_date","end_date","status"].filter((f) => Object.prototype.hasOwnProperty.call(req.body, f));
     if (!fields.length) return res.status(400).json({ message: "No allocation fields supplied" });
+    if (Object.prototype.hasOwnProperty.call(req.body, "role")) {
+      const allocation = await db.query(
+        `SELECT user_account.role AS account_role
+         FROM workforce_allocations allocation
+         JOIN users user_account ON user_account.id=allocation.worker_id
+         WHERE allocation.id=$1`,
+        [req.params.id]
+      );
+      if (!allocation.rows.length) return res.status(404).json({ message: "Allocation not found" });
+      const isSiteEngineerRole = allocation.rows[0].account_role === "Site Engineer";
+      if (isSiteEngineerRole !== (req.body.role === "Site Engineer")) {
+        return res.status(400).json({ message: "The Site Engineer workforce role must match the assigned account role." });
+      }
+    }
+    if (req.user.role === "Project Manager") {
+      const current = await db.query(
+        "SELECT project_id FROM workforce_allocations WHERE id=$1",
+        [req.params.id]
+      );
+      if (!current.rows.length) return res.status(404).json({ message: "Allocation not found" });
+      const projectIds = [current.rows[0].project_id];
+      if (Object.prototype.hasOwnProperty.call(req.body, "project_id")) projectIds.push(req.body.project_id);
+      const projects = await db.query(
+        "SELECT id FROM projects WHERE id = ANY($1::bigint[]) AND manager_id=$2",
+        [projectIds, req.user.id]
+      );
+      if (projects.rows.length !== new Set(projectIds.map(Number)).size) {
+        return res.status(403).json({ message: "You can only manage allocations for your own projects." });
+      }
+    }
     const values = fields.map((f) => req.body[f]);
     const result = await db.query(`UPDATE workforce_allocations SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(", ")} WHERE id=$${values.length+1} RETURNING *`, [...values, req.params.id]);
     if (!result.rows.length) return res.status(404).json({ message: "Allocation not found" });
@@ -84,7 +177,21 @@ const updateWorkforceAllocation = async (req, res) => {
 };
 
 const deleteWorkforceAllocation = async (req, res) => {
-  try { const result = await db.query("DELETE FROM workforce_allocations WHERE id=$1 RETURNING *", [req.params.id]); if (!result.rows.length) return res.status(404).json({ message: "Allocation not found" }); res.json({ message: "Workforce allocation deleted", allocation: result.rows[0] }); }
+  try {
+    if (req.user.role === "Project Manager") {
+      const allocation = await db.query(
+        `SELECT allocation.id
+         FROM workforce_allocations allocation
+         JOIN projects project ON project.id=allocation.project_id
+         WHERE allocation.id=$1 AND project.manager_id=$2`,
+        [req.params.id, req.user.id]
+      );
+      if (!allocation.rows.length) return res.status(404).json({ message: "Allocation not found in your projects" });
+    }
+    const result = await db.query("DELETE FROM workforce_allocations WHERE id=$1 RETURNING *",[req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ message: "Allocation not found" });
+    res.json({ message: "Workforce allocation deleted", allocation: result.rows[0] });
+  }
   catch (e) { simpleError(res, e, "Error deleting workforce allocation"); }
 };
 
@@ -102,4 +209,4 @@ const createPayroll = async (req,res)=>{try{const {worker_id,project_id=null,pay
 const updatePayroll=async(req,res)=>{try{const fields=["project_id","pay_period_start","pay_period_end","days_worked","daily_wage","overtime","deductions","net_pay","payment_status"].filter((f)=>Object.prototype.hasOwnProperty.call(req.body,f));if(!fields.length)return res.status(400).json({message:"No payroll fields supplied"});const values=fields.map(f=>req.body[f]);const result=await db.query(`UPDATE payroll SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(", ")} WHERE id=$${values.length+1} RETURNING *`,[...values,req.params.id]);if(!result.rows.length)return res.status(404).json({message:"Payroll record not found"});res.json({message:"Payroll updated",payroll:result.rows[0]});}catch(e){simpleError(res,e,"Error updating payroll");}};
 const deletePayroll=async(req,res)=>{try{const result=await db.query("DELETE FROM payroll WHERE id=$1 RETURNING *",[req.params.id]);if(!result.rows.length)return res.status(404).json({message:"Payroll record not found"});res.json({message:"Payroll deleted",payroll:result.rows[0]});}catch(e){simpleError(res,e,"Error deleting payroll");}};
 
-module.exports = { list, createMaterialRequest, updateMaterialRequest, deleteMaterialRequest, createMaterialAllocation, deleteMaterialAllocation, createWorkforceAllocation, updateWorkforceAllocation, deleteWorkforceAllocation, createShift, updateShift, deleteShift, createPayroll, updatePayroll, deletePayroll };
+module.exports = { list, createMaterialRequest, updateMaterialRequest, deleteMaterialRequest, createMaterialAllocation, deleteMaterialAllocation, getWorkforceAllocations, createWorkforceAllocation, updateWorkforceAllocation, deleteWorkforceAllocation, createShift, updateShift, deleteShift, createPayroll, updatePayroll, deletePayroll };

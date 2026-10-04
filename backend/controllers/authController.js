@@ -2,23 +2,30 @@ const pool = require("../db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const signupRoles = new Set(["Administrator", "Project Manager", "Site Engineer", "Worker", "Site Worker", "Client"]);
+
 const signup = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone } = req.body;
 
         if (!name || !email || !password || !role) {
             return res.status(400).json({
                 message: "All fields are required"
             });
         }
+        if (!signupRoles.has(role)) {
+            return res.status(400).json({
+                message: "Select a supported BuildTrack role."
+            });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            `INSERT INTO users (name, email, password_hash, role)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id, name, email, role`,
-            [name, email, hashedPassword, role]
+            `INSERT INTO users (name, email, password_hash, role, phone)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, name, email, phone, role, is_active`,
+            [name, email, hashedPassword, role, phone || null]
         );
 
         res.status(201).json({
@@ -89,7 +96,9 @@ const login = async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                phone: user.phone || null,
+                role: user.role,
+                is_active: user.is_active
             }
         });
 

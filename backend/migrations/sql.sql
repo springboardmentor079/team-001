@@ -1,10 +1,10 @@
+ALTER TABLE resources
+    DROP COLUMN IF EXISTS utilization_percentage;
+
 
 
 ALTER TABLE projects
     ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP WITHOUT TIME ZONE;
-
-ALTER TABLE resources
-    ADD COLUMN IF NOT EXISTS utilization_percentage NUMERIC(5,2);
 
 CREATE TABLE IF NOT EXISTS material_requests (
     id BIGSERIAL PRIMARY KEY,

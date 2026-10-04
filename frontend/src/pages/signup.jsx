@@ -52,26 +52,7 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
         return;
       }
 
-      // Seamless fallback if backend is offline or unreachable
-      console.warn('Backend signup offline, using client session:', msg);
-      const fallbackUser = {
-        id: Date.now(),
-        name: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        role: role.toLowerCase().replace(/\s+/g, '_'),
-      };
-      const fallbackToken = 'demo-jwt-token-' + Date.now();
-      localStorage.setItem('user', JSON.stringify(fallbackUser));
-      localStorage.setItem('token', fallbackToken);
-
-      setSuccess('Account created successfully! Redirecting...');
-      setTimeout(() => {
-        if (onSignupSuccess) {
-          onSignupSuccess(fallbackUser);
-        } else if (onNavigateToLogin) {
-          onNavigateToLogin();
-        }
-      }, 900);
+      setError(msg || 'Unable to create your account right now. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -136,7 +117,6 @@ export const Signup = ({ onSignupSuccess, onNavigateToLogin }) => {
             >
               <option value="Project Manager">Project Manager</option>
               <option value="Site Engineer">Site Engineer</option>
-              <option value="Contractor">Contractor</option>
               <option value="Administrator">Administrator</option>
               <option value="Worker">Site Worker</option>
               <option value="Client">Client / Investor</option>

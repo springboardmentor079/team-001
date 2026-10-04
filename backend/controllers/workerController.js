@@ -40,7 +40,15 @@ const createWorker = async (req, res) => {
 
 const getWorkers = async (req, res) => {
     try {
-        const result = await db.query(
+        const result = req.user.role === "Worker" || req.user.role === "Site Worker"
+            ? await db.query(
+                `SELECT id, name, email, role, phone, is_active, created_at
+                 FROM users
+                 WHERE id=$1 AND role IN ('Worker', 'Site Worker')
+                 ORDER BY id`,
+                [req.user.id]
+            )
+            : await db.query(
             `SELECT
                 id,
                 name,
@@ -52,7 +60,7 @@ const getWorkers = async (req, res) => {
              FROM users
              WHERE role = 'Worker'
              ORDER BY id`
-        );
+            );
 
         res.status(200).json(result.rows);
 

@@ -1,4 +1,6 @@
 const express = require("express");
+const verifyToken = require("../middleware/authMiddleware");
+const allowRoles = require("../middleware/roleMiddleware");
 
 const {
   createProcurement,
@@ -22,7 +24,7 @@ router.post("/", createProcurement);
 
 router.put("/:id", updateProcurement);
 
-router.patch("/:id/status", updateProcurementStatus);
+router.patch("/:id/status", verifyToken, allowRoles("Administrator"), updateProcurementStatus);
 
 router.delete("/:id", deleteProcurement);
 

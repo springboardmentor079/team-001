@@ -8,7 +8,6 @@ const validate = (body, update = false) => {
     if (body.category && !RESOURCE_CATEGORIES.includes(body.category)) return "Invalid resource category";
     if (body.status && !RESOURCE_STATUSES.includes(body.status)) return "Invalid resource status";
     if (body.quantity !== undefined && (!Number.isInteger(Number(body.quantity)) || Number(body.quantity) < 0)) return "Quantity must be a non-negative integer";
-    if (body.utilization_percentage !== undefined && (Number(body.utilization_percentage) < 0 || Number(body.utilization_percentage) > 100)) return "Utilization must be between 0 and 100";
     return null;
 };
 
@@ -16,13 +15,13 @@ const createResource = async (req, res) => {
     try {
         const error = validate(req.body);
         if (error) return res.status(400).json({ message: error });
-        const { name, category, quantity = 1, project_id = null, status = "AVAILABLE", utilization_percentage = 0, location = null, maintenance_date = null } = req.body;
+        const { name, category, quantity = 1, project_id = null, status = "AVAILABLE", location = null, maintenance_date = null } = req.body;
         const projectCheck = project_id ? await db.query("SELECT id FROM projects WHERE id=$1", [project_id]) : { rows: [1] };
         if (project_id && !projectCheck.rows.length) return res.status(400).json({ message: "Project not found" });
         const result = await db.query(
-            `INSERT INTO resources (project_id,name,category,quantity,status,location,maintenance_date,utilization_percentage)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-            [project_id, name, category, quantity, status, location, maintenance_date || null, utilization_percentage]
+            `INSERT INTO resources (project_id,name,category,quantity,status,location,maintenance_date)
+             VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+            [project_id, name, category, quantity, status, location, maintenance_date || null]
         );
         res.status(201).json({ message: "Resource created successfully", resource: result.rows[0] });
     } catch (error) {
@@ -53,7 +52,7 @@ const updateResource = async (req, res) => {
     try {
         const error = validate(req.body, true);
         if (error) return res.status(400).json({ message: error });
-        const fields = ["project_id","name","category","quantity","status","location","maintenance_date","utilization_percentage"].filter((f) => Object.prototype.hasOwnProperty.call(req.body, f));
+        const fields = ["project_id","name","category","quantity","status","location","maintenance_date"].filter((f) => Object.prototype.hasOwnProperty.call(req.body, f));
         if (!fields.length) return res.status(400).json({ message: "No resource fields supplied" });
         if (req.body.project_id) {
             const project = await db.query("SELECT id FROM projects WHERE id=$1", [req.body.project_id]);

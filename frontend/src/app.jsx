@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
 import { Login } from './pages/Login';
 import { Signup } from './pages/signup';
 import { Dashboard } from './pages/Dashboard';
@@ -20,11 +19,7 @@ export default function App() {
 
       try {
         const profile = await api.getProfile();
-        // If token valid and user data in storage
-        const stored = getStoredUser();
-        if (stored) {
-          setCurrentUser(stored);
-        } else if (profile?.user) {
+        if (profile?.user) {
           setCurrentUser(profile.user);
         }
       } catch (err) {
@@ -60,7 +55,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
         <div className="text-center space-y-3">
           <div className="h-8 w-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold" style={{ color: '#4b5563', letterSpacing: '0.08em' }}>Connecting to BuildTrack API...</p>
+          <p className="text-xs font-semibold" style={{ color: '#4b5563', letterSpacing: '0.08em' }}>Preparing your workspace...</p>
         </div>
       </div>
     );
@@ -85,10 +80,9 @@ export default function App() {
     );
   }
 
-  // Authenticated workspace: Navbar + Dashboard
+  // Authenticated workspace: Dashboard owns the single workspace header.
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: '#fffdf6', color: '#111111' }}>
-      <Navbar currentUser={currentUser} onLogout={handleLogout} />
       <Dashboard currentUser={currentUser} onLogout={handleLogout} />
     </div>
   );

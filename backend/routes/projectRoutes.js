@@ -19,7 +19,7 @@ const {
 router.post(
     "/",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator"),
     createProject
 );
 
@@ -27,7 +27,7 @@ router.post(
 router.get(
     "/",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator", "Project Manager", "Site Engineer", "Worker", "Site Worker"),
     getProjects
 );
 
@@ -35,7 +35,7 @@ router.get(
 router.get(
     "/:id",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator", "Project Manager", "Site Engineer", "Worker", "Site Worker"),
     getProjectById
 );
 
@@ -43,7 +43,7 @@ router.get(
 router.put(
     "/:id",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator"),
     updateProject
 );
 
@@ -51,7 +51,7 @@ router.put(
 router.patch(
     "/:id/close",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator"),
     closeProject
 );
 
@@ -59,7 +59,7 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles("Administrator", "Project Manager"),
+    allowRoles("Administrator"),
     deleteProject
 );
 

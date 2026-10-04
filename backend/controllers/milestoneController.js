@@ -1,5 +1,19 @@
 const db = require("../db");
 
+const hasSiteEngineerProjectAssignment = async (userId, projectId) => {
+    const result = await db.query(
+        `SELECT 1
+         FROM workforce_allocations
+         WHERE worker_id=$1
+           AND project_id=$2
+           AND role='Site Engineer'
+           AND status='ACTIVE'
+         LIMIT 1`,
+        [userId, projectId]
+    );
+    return result.rows.length > 0;
+};
+
 const createProgress = async (req, res) => {
     try {
         const {
@@ -11,6 +25,11 @@ const createProgress = async (req, res) => {
             status,
             completion_pct
         } = req.body;
+
+        if (req.user.role === "Site Engineer" &&
+            !(await hasSiteEngineerProjectAssignment(req.user.id, project_id))) {
+            return res.status(403).json({ message: "You can only create milestones for projects assigned to you." });
+        }
 
         const result = await db.query(
             `INSERT INTO project_milestones
@@ -46,9 +65,22 @@ const createProgress = async (req, res) => {
 
 const getProgress = async (req, res) => {
     try {
-        const result = await db.query(
-            "SELECT * FROM project_milestones ORDER BY id"
-        );
+        const result = req.user.role === "Site Engineer"
+            ? await db.query(
+                `SELECT milestone.*
+                 FROM project_milestones milestone
+                 WHERE EXISTS (
+                   SELECT 1
+                   FROM workforce_allocations assignment
+                   WHERE assignment.worker_id=$1
+                     AND assignment.project_id=milestone.project_id
+                     AND assignment.role='Site Engineer'
+                     AND assignment.status='ACTIVE'
+                 )
+                 ORDER BY milestone.id`,
+                [req.user.id]
+            )
+            : await db.query("SELECT * FROM project_milestones ORDER BY id");
 
         res.status(200).json(result.rows);
 
@@ -67,10 +99,22 @@ const getProgressById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const result = await db.query(
-            "SELECT * FROM project_milestones WHERE id = $1",
-            [id]
-        );
+        const result = req.user.role === "Site Engineer"
+            ? await db.query(
+                `SELECT milestone.*
+                 FROM project_milestones milestone
+                 WHERE milestone.id=$1
+                   AND EXISTS (
+                     SELECT 1
+                     FROM workforce_allocations assignment
+                     WHERE assignment.worker_id=$2
+                       AND assignment.project_id=milestone.project_id
+                       AND assignment.role='Site Engineer'
+                       AND assignment.status='ACTIVE'
+                   )`,
+                [id, req.user.id]
+            )
+            : await db.query("SELECT * FROM project_milestones WHERE id = $1", [id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -104,6 +148,27 @@ const updateProgress = async (req, res) => {
             status,
             completion_pct
         } = req.body;
+
+        if (req.user.role === "Site Engineer") {
+            const assignedMilestone = await db.query(
+                `SELECT milestone.id
+                 FROM project_milestones milestone
+                 WHERE milestone.id=$1
+                   AND milestone.project_id=$2
+                   AND EXISTS (
+                     SELECT 1
+                     FROM workforce_allocations assignment
+                     WHERE assignment.worker_id=$3
+                       AND assignment.project_id=milestone.project_id
+                       AND assignment.role='Site Engineer'
+                       AND assignment.status='ACTIVE'
+                   )`,
+                [id, project_id, req.user.id]
+            );
+            if (!assignedMilestone.rows.length) {
+                return res.status(403).json({ message: "You can only update milestones for projects assigned to you." });
+            }
+        }
 
         const result = await db.query(
             `UPDATE project_milestones
@@ -154,10 +219,22 @@ const deleteProgress = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const result = await db.query(
-            "DELETE FROM project_milestones WHERE id = $1 RETURNING *",
-            [id]
-        );
+        const result = req.user.role === "Site Engineer"
+            ? await db.query(
+                `DELETE FROM project_milestones milestone
+                 WHERE milestone.id=$1
+                   AND EXISTS (
+                     SELECT 1
+                     FROM workforce_allocations assignment
+                     WHERE assignment.worker_id=$2
+                       AND assignment.project_id=milestone.project_id
+                       AND assignment.role='Site Engineer'
+                       AND assignment.status='ACTIVE'
+                   )
+                 RETURNING milestone.*`,
+                [id, req.user.id]
+            )
+            : await db.query("DELETE FROM project_milestones WHERE id = $1 RETURNING *", [id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

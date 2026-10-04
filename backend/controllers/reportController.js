@@ -80,8 +80,7 @@ const getResourceReport = async (req, res) => {
          quantity,
          status,
          location,
-         maintenance_date,
-         utilization_percentage
+         maintenance_date
        FROM resources
        WHERE project_id = $1
        ORDER BY category, name`,
@@ -191,7 +190,6 @@ const getWorkforceReport = async (req, res) => {
        WHERE u.role IN (
          'Engineer',
          'Supervisor',
-         'Contractor',
          'Skilled Worker',
          'Unskilled Worker',
          'Consultant'
@@ -217,14 +215,15 @@ const getAttendanceReport = async (req, res) => {
     const result = await db.query(
       `SELECT
          a.id,
-         a.worker_id,
+        worker_record.user_id AS worker_id,
          u.name AS worker_name,
          a.attendance_date,
          a.status,
          a.check_in,
          a.check_out
        FROM attendance a
-       LEFT JOIN users u ON u.id = a.worker_id
+      JOIN workers worker_record ON worker_record.id = a.worker_id
+      LEFT JOIN users u ON u.id = worker_record.user_id
        ORDER BY a.attendance_date DESC`
     );
 
