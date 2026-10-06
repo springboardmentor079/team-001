@@ -11,7 +11,7 @@ let adminToken = '';
 let clientToken = '';
 let clientId = '';
 let adminOrg = '';
-const browser = { Origin: 'http://localhost:4200', 'X-BuildTrack-Client': 'web' };
+const browser = { Origin: env.APP_ORIGIN, 'X-BuildTrack-Client': 'web' };
 beforeAll(async () => {
   if (!new URL(env.DATABASE_URL).pathname.endsWith('_test'))
     throw new Error('Integration tests require an isolated _test database');
