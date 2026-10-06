@@ -15,7 +15,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://buildtrack:ci-only-buildtrack-password@localhost:5432/buildtrack
       JWT_SECRET: ci-only-secret-for-isolated-tests-do-not-use-in-production-2026
-      APP_ORIGIN: http://localhost:4200
+      APP_ORIGIN: http://127.0.0.1:4200
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:4200
       MAIL_PROVIDER: local
       DEMO_PASSWORD: BuildTrackDemo2026!
       CI: true
@@ -39,10 +40,20 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: |
           npm run dev > /tmp/buildtrack.log 2>&1 &
+          dev_pid=$!
+          trap 'kill "$dev_pid" 2>/dev/null || true' EXIT
+          ready=false
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:4200 >/dev/null && curl -fsS http://localhost:4300/api/ready >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:4200 >/dev/null && curl -fsS http://127.0.0.1:4300/api/ready >/dev/null; then
+              ready=true
+              break
+            fi
             sleep 2
           done
+          if [ "$ready" != true ]; then
+            cat /tmp/buildtrack.log
+            exit 1
+          fi
           npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
