@@ -93,7 +93,7 @@ authRouter.post('/change-password', authenticate, async (req, res) => {
     throw new HttpError(400, 'Current password is incorrect.');
   const passwordHash = await bcrypt.hash(data.password, 12);
   await db.$transaction([
-    db.user.update({ where: { id: user.id }, data: { passwordHash } }),
+    db.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: false } }),
     db.authSession.updateMany({
       where: { userId: user.id, revokedAt: null },
       data: { revokedAt: new Date() },

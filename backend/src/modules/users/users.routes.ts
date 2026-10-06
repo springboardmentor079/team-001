@@ -27,6 +27,7 @@ const selection = {
   role: true,
   active: true,
   lastLoginAt: true,
+  mustChangePassword: true,
 } as const;
 usersRouter.get('/roles', (_req, res) => ok(res, rolePermissions));
 usersRouter.post(
@@ -53,12 +54,47 @@ usersRouter.post(
   },
 );
 usersRouter.get('/', async (req, res) => {
-  const users = await db.user.findMany({
-    where: { organizationId: req.identity!.organizationId },
-    select: selection,
-    orderBy: { name: 'asc' },
+  const query = z
+    .object({
+      search: z.string().trim().max(150).optional(),
+      role: z.enum(Role).optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+      sort: z.enum(['name', 'createdAt', 'lastLoginAt']).default('name'),
+      direction: z.enum(['asc', 'desc']).default('asc'),
+    })
+    .strict()
+    .parse(req.query);
+  const where = {
+    organizationId: req.identity!.organizationId,
+    ...(query.role ? { role: query.role } : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' as const } },
+            { email: { contains: query.search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
+  const paginate = query.page !== undefined || query.limit !== undefined;
+  const page = query.page || 1,
+    limit = query.limit || 20;
+  const [users, total] = await Promise.all([
+    db.user.findMany({
+      where,
+      select: selection,
+      orderBy: { [query.sort]: query.direction },
+      ...(paginate ? { skip: (page - 1) * limit, take: limit } : {}),
+    }),
+    db.user.count({ where }),
+  ]);
+  return ok(res, users, 'Success', 200, {
+    page,
+    limit: paginate ? limit : Math.max(total, 1),
+    total,
+    totalPages: paginate ? Math.max(1, Math.ceil(total / limit)) : 1,
   });
-  return ok(res, users);
 });
 usersRouter.post('/', async (req, res) => {
   const input = z
@@ -78,6 +114,7 @@ usersRouter.post('/', async (req, res) => {
         email: input.email,
         role: input.role,
         passwordHash,
+        mustChangePassword: true,
         organizationId: actor.organizationId,
       },
       select: selection,
@@ -93,7 +130,13 @@ usersRouter.post('/', async (req, res) => {
     });
     return created;
   });
-  return ok(res, user, 'Team member created.', 201);
+  await requestReset(input.email);
+  return ok(
+    res,
+    user,
+    'Team member created and an invitation link was sent through the configured delivery service.',
+    201,
+  );
 });
 usersRouter.patch('/:id', async (req, res) => {
   const id = z.uuid().parse(req.params.id);

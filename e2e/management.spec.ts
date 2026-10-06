@@ -66,7 +66,10 @@ test('administrator creates, edits, resets and deactivates a member', async ({ p
   await page
     .getByLabel('Email address', { exact: true })
     .fill(`engineer-${organizationId}@buildtrack.test`);
-  await page.getByLabel('Role', { exact: true }).selectOption('SITE_ENGINEER');
+  await page
+    .getByRole('region', { name: 'Add team member' })
+    .getByLabel('Role', { exact: true })
+    .selectOption('SITE_ENGINEER');
   await page.getByLabel('Initial password').fill(password);
   await page.getByRole('button', { name: 'Save member' }).click();
   await expect(page.getByRole('status')).toHaveText('Team member created.');
@@ -78,7 +81,10 @@ test('administrator creates, edits, resets and deactivates a member', async ({ p
     .click();
   await expect(page.getByRole('status')).toContainText('Password reset requested');
   await page.getByRole('button', { name: 'Edit New Site Engineer', exact: true }).click();
-  await page.getByLabel('Role', { exact: true }).selectOption('CONTRACTOR');
+  await page
+    .getByRole('region', { name: 'Edit team member' })
+    .getByLabel('Role', { exact: true })
+    .selectOption('CONTRACTOR');
   await page.getByLabel('Account access').selectOption({ label: 'Inactive' });
   await page.getByRole('button', { name: 'Save member' }).click();
   await expect(row).toContainText('Inactive');
@@ -112,6 +118,9 @@ test('project creation, persistence, editing, filtering and status lifecycle', a
   await page.getByLabel('Project name').fill('Updated Construction Site');
   await page.getByRole('button', { name: 'Save project' }).click();
   await expect(page.getByRole('status')).toHaveText('Project updated.');
+  await page.getByLabel('Search workspace').fill('Updated Construction');
+  await expect(page.getByRole('option', { name: /Updated Construction Site/ })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByLabel('Update status', { exact: true }).selectOption('ACTIVE');
   await page.getByRole('button', { name: 'Update status', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Project status updated.');
@@ -126,7 +135,7 @@ test('project creation, persistence, editing, filtering and status lifecycle', a
   await expect(page.getByRole('status')).toHaveText('Schedule item created.');
   await expect(page.getByRole('heading', { name: 'Foundation milestone' })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('35% · Unassigned')).toBeVisible();
+  await expect(page.getByText('35% · weight 1 · Unassigned')).toBeVisible();
   await page.getByRole('link', { name: 'Project overview', exact: false }).click();
   await expect(page.getByText('35%', { exact: true }).first()).toBeVisible();
   await page.getByRole('link', { name: 'Site operations' }).click();

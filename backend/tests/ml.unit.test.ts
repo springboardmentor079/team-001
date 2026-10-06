@@ -7,6 +7,7 @@ import {
   trainRidgeRegression,
   trainLogistic,
 } from '../src/modules/ml/ml.routes';
+import { Prisma } from '@prisma/client';
 
 function record(index: number, late: boolean): ScheduleRecord {
   const startDate = new Date('2026-01-01T00:00:00Z');
@@ -22,6 +23,9 @@ function record(index: number, late: boolean): ScheduleRecord {
     actualDate: new Date(late ? '2026-02-12T00:00:00Z' : '2026-01-29T00:00:00Z'),
     status: 'COMPLETED',
     progress: 100,
+    weight: new Prisma.Decimal(1),
+    baselineStartDate: startDate,
+    baselinePlannedDate: plannedDate,
     responsibleId: null,
     dependencyId: late ? `dependency-${index}` : null,
     version: 1,
@@ -38,13 +42,25 @@ function record(index: number, late: boolean): ScheduleRecord {
 }
 
 test('logistic delay model trains only with sufficient outcome diversity', () => {
-  expect(trainLogistic(Array.from({ length: 11 }, (_, index) => record(index, index > 5))).ready).toBe(false);
+  expect(
+    trainLogistic(Array.from({ length: 11 }, (_, index) => record(index, index > 5))).ready,
+  ).toBe(false);
   const rows = Array.from({ length: 20 }, (_, index) => record(index, index >= 10));
   const model = trainLogistic(rows);
   expect(model.ready).toBe(true);
   if (!model.ready) throw new Error('Expected the model to train');
-  const low = sigmoid(scheduleFeatures(record(30, false)).reduce((sum, value, index) => sum + value * model.weights[index]!, 0));
-  const high = sigmoid(scheduleFeatures(record(31, true)).reduce((sum, value, index) => sum + value * model.weights[index]!, 0));
+  const low = sigmoid(
+    scheduleFeatures(record(30, false)).reduce(
+      (sum, value, index) => sum + value * model.weights[index]!,
+      0,
+    ),
+  );
+  const high = sigmoid(
+    scheduleFeatures(record(31, true)).reduce(
+      (sum, value, index) => sum + value * model.weights[index]!,
+      0,
+    ),
+  );
   expect(high).toBeGreaterThan(low);
   expect(model.brier).toBeLessThan(0.25);
 });
@@ -76,13 +92,20 @@ test('equipment failure classifier learns service-overrun and utilization signal
   const samples = Array.from({ length: 24 }, (_, index) => {
     const failure = index >= 12;
     return {
-      x: [1, failure ? 1.6 + index / 100 : 0.5 + index / 100, failure ? 0.85 : 0.2, index / 30, failure ? 1 : 0],
+      x: [
+        1,
+        failure ? 1.6 + index / 100 : 0.5 + index / 100,
+        failure ? 0.85 : 0.2,
+        index / 30,
+        failure ? 1 : 0,
+      ],
       y: failure ? 1 : 0,
     };
   });
   const model = trainBinaryLogistic(samples);
   expect(model.ready).toBe(true);
   if (!model.ready) throw new Error('Expected the maintenance model to train');
-  const score = (x: number[]) => sigmoid(x.reduce((sum, value, index) => sum + value * model.weights[index]!, 0));
+  const score = (x: number[]) =>
+    sigmoid(x.reduce((sum, value, index) => sum + value * model.weights[index]!, 0));
   expect(score([1, 1.8, 0.9, 0.8, 1])).toBeGreaterThan(score([1, 0.4, 0.1, 0.2, 0]));
 });

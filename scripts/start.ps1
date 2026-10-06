@@ -17,14 +17,17 @@ if (Test-Path -LiteralPath $pgData) {
 }
 New-Item -ItemType Directory -Force -Path $localDir | Out-Null
 function Test-ServiceUrl([string]$url) {
-    try { $response = Invoke-WebRequest -Uri $url -TimeoutSec 3; return $response.StatusCode -eq 200 } catch { return $false }
+    try { $response = Invoke-WebRequest -Uri $url -TimeoutSec 10; return $response.StatusCode -eq 200 } catch { return $false }
 }
 if (!(Test-ServiceUrl 'http://127.0.0.1:4300/api/ready')) {
     $api = Start-Process -FilePath $nodeExe -ArgumentList 'dist/src/server.js' -WorkingDirectory (Join-Path $projectRoot 'backend') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $localDir 'api.log') -RedirectStandardError (Join-Path $localDir 'api-error.log')
     $api.Id | Set-Content -LiteralPath (Join-Path $localDir 'api.pid')
 }
 if (!(Test-ServiceUrl 'http://localhost:4200')) {
-    $angularCli = Join-Path $projectRoot 'node_modules/@angular/cli/bin/ng.js'
+    $rootAngularCli = Join-Path $projectRoot 'node_modules/@angular/cli/bin/ng.js'
+    $workspaceAngularCli = Join-Path $projectRoot 'frontend/node_modules/@angular/cli/bin/ng.js'
+    $angularCli = if (Test-Path -LiteralPath $rootAngularCli) { $rootAngularCli } else { $workspaceAngularCli }
+    if (!(Test-Path -LiteralPath $angularCli)) { throw 'Angular CLI is missing; run npm ci first.' }
     $webArgs = '"' + $angularCli + '" serve --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.json'
     $web = Start-Process -FilePath $nodeExe -ArgumentList $webArgs -WorkingDirectory (Join-Path $projectRoot 'frontend') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $localDir 'web.log') -RedirectStandardError (Join-Path $localDir 'web-error.log')
     $web.Id | Set-Content -LiteralPath (Join-Path $localDir 'web.pid')
@@ -32,7 +35,7 @@ if (!(Test-ServiceUrl 'http://localhost:4200')) {
 foreach ($serviceUrl in @('http://127.0.0.1:4300/api/ready', 'http://localhost:4200')) {
     # Cold starts can spend more than 30 seconds loading Node modules from a
     # OneDrive-backed workspace, especially after the machine has restarted.
-    $serviceDeadline = (Get-Date).AddSeconds(90)
+    $serviceDeadline = (Get-Date).AddSeconds(180)
     while (!(Test-ServiceUrl $serviceUrl)) {
         if ((Get-Date) -ge $serviceDeadline) { throw "Service did not become ready: $serviceUrl. Check .local logs." }
         Start-Sleep -Milliseconds 250

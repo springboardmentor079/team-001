@@ -49,6 +49,7 @@ model User {
   passwordHash          String
   role                  Role                  @default(CLIENT)
   active                Boolean               @default(true)
+  mustChangePassword    Boolean               @default(false)
   lastLoginAt           DateTime?             @db.Timestamptz(3)
   createdAt             DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
@@ -79,16 +80,28 @@ model User {
 }
 
 model AuthSession {
-  id          String    @id @default(uuid()) @db.Uuid
-  userId      String    @db.Uuid
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  refreshHash String    @unique
-  expiresAt   DateTime  @db.Timestamptz(3)
-  revokedAt   DateTime? @db.Timestamptz(3)
-  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  id               String            @id @default(uuid()) @db.Uuid
+  userId           String            @db.Uuid
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshHash      String            @unique
+  refreshTokenUses RefreshTokenUse[]
+  expiresAt        DateTime          @db.Timestamptz(3)
+  revokedAt        DateTime?         @db.Timestamptz(3)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([userId, revokedAt])
   @@map("auth_sessions")
+}
+
+model RefreshTokenUse {
+  id         String      @id @default(uuid()) @db.Uuid
+  sessionId  String      @db.Uuid
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tokenHash  String      @unique
+  consumedAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([sessionId, consumedAt])
+  @@map("refresh_token_uses")
 }
 
 model PasswordReset {
@@ -195,54 +208,73 @@ enum WorkStatus {
 }
 
 model WorkItem {
-  id            String      @id @default(uuid()) @db.Uuid
-  projectId     String      @db.Uuid
-  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  kind          WorkKind
-  name          String      @db.VarChar(150)
-  description   String      @default("") @db.VarChar(5000)
-  startDate     DateTime    @db.Date
-  plannedDate   DateTime    @db.Date
-  actualDate    DateTime?   @db.Date
-  status        WorkStatus  @default(NOT_STARTED)
-  progress      Int         @default(0)
-  responsibleId String?     @db.Uuid
-  responsible   User?       @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
-  dependencyId  String?     @db.Uuid
-  dependency    WorkItem?   @relation("WorkDependencies", fields: [dependencyId], references: [id], onDelete: Restrict)
-  dependents    WorkItem[]  @relation("WorkDependencies")
-  delays        SiteDelay[]
-  version       Int         @default(1)
-  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime    @updatedAt @db.Timestamptz(3)
+  id                  String      @id @default(uuid()) @db.Uuid
+  projectId           String      @db.Uuid
+  project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind                WorkKind
+  name                String      @db.VarChar(150)
+  description         String      @default("") @db.VarChar(5000)
+  startDate           DateTime    @db.Date
+  plannedDate         DateTime    @db.Date
+  actualDate          DateTime?   @db.Date
+  status              WorkStatus  @default(NOT_STARTED)
+  progress            Int         @default(0)
+  weight              Decimal     @default(1) @db.Decimal(8, 2)
+  baselineStartDate   DateTime?   @db.Date
+  baselinePlannedDate DateTime?   @db.Date
+  responsibleId       String?     @db.Uuid
+  responsible         User?       @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
+  dependencyId        String?     @db.Uuid
+  dependency          WorkItem?   @relation("WorkDependencies", fields: [dependencyId], references: [id], onDelete: Restrict)
+  dependents          WorkItem[]  @relation("WorkDependencies")
+  delays              SiteDelay[]
+  version             Int         @default(1)
+  createdAt           DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @db.Timestamptz(3)
 
   @@index([projectId, plannedDate])
   @@map("work_items")
 }
 
 model SiteReport {
-  id                 String   @id @default(uuid()) @db.Uuid
-  projectId          String   @db.Uuid
-  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  authorId           String?  @db.Uuid
-  author             User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  reportDate         DateTime @db.Date
-  weather            String   @db.VarChar(150)
+  id                 String                 @id @default(uuid()) @db.Uuid
+  projectId          String                 @db.Uuid
+  project            Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId           String?                @db.Uuid
+  author             User?                  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  reportDate         DateTime               @db.Date
+  weather            String                 @db.VarChar(150)
   workersPresent     Int
-  workCompleted      String   @db.VarChar(5000)
+  workCompleted      String                 @db.VarChar(5000)
   reportedProgress   Int
-  materialsUsed      String   @default("") @db.VarChar(5000)
-  equipmentUsed      String   @default("") @db.VarChar(5000)
-  safetyObservations String   @default("") @db.VarChar(5000)
-  issues             String   @default("") @db.VarChar(5000)
-  notes              String   @default("") @db.VarChar(5000)
-  version            Int      @default(1)
-  createdAt          DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  materialsUsed      String                 @default("") @db.VarChar(5000)
+  equipmentUsed      String                 @default("") @db.VarChar(5000)
+  safetyObservations String                 @default("") @db.VarChar(5000)
+  issues             String                 @default("") @db.VarChar(5000)
+  notes              String                 @default("") @db.VarChar(5000)
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  attachments        SiteReportAttachment[]
 
   @@unique([projectId, authorId, reportDate])
   @@index([projectId, reportDate])
   @@map("site_reports")
+}
+
+model SiteReportAttachment {
+  id          String     @id @default(uuid()) @db.Uuid
+  reportId    String     @db.Uuid
+  report      SiteReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  filename    String     @db.VarChar(255)
+  mimeType    String     @db.VarChar(120)
+  size        Int
+  storagePath String     @db.VarChar(500)
+  checksum    String     @db.VarChar(64)
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([reportId, createdAt])
+  @@map("site_report_attachments")
 }
 
 enum DelayStatus {
@@ -308,23 +340,23 @@ enum EquipmentStatus {
 }
 
 model Equipment {
-  id             String                @id @default(uuid()) @db.Uuid
-  organizationId String                @db.Uuid
-  organization   Organization          @relation(fields: [organizationId], references: [id])
-  code           String                @db.VarChar(40)
-  name           String                @db.VarChar(150)
-  type           String                @db.VarChar(100)
-  location       String                @db.VarChar(200)
-  status         EquipmentStatus       @default(AVAILABLE)
-  hourlyRate     Decimal               @default(0) @db.Decimal(12, 2)
-  commissionedAt DateTime?             @db.Date
-  serviceIntervalDays Int              @default(90)
-  notes          String                @default("") @db.VarChar(3000)
-  active         Boolean               @default(true)
-  version        Int                   @default(1)
-  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
-  allocations    EquipmentAllocation[]
-  maintenance    MaintenanceRecord[]
+  id                  String                @id @default(uuid()) @db.Uuid
+  organizationId      String                @db.Uuid
+  organization        Organization          @relation(fields: [organizationId], references: [id])
+  code                String                @db.VarChar(40)
+  name                String                @db.VarChar(150)
+  type                String                @db.VarChar(100)
+  location            String                @db.VarChar(200)
+  status              EquipmentStatus       @default(AVAILABLE)
+  hourlyRate          Decimal               @default(0) @db.Decimal(12, 2)
+  commissionedAt      DateTime?             @db.Date
+  serviceIntervalDays Int                   @default(90)
+  notes               String                @default("") @db.VarChar(3000)
+  active              Boolean               @default(true)
+  version             Int                   @default(1)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+  allocations         EquipmentAllocation[]
+  maintenance         MaintenanceRecord[]
 
   @@unique([organizationId, code])
   @@index([organizationId, status])
@@ -358,19 +390,19 @@ enum MaintenanceStatus {
 }
 
 model MaintenanceRecord {
-  id          String            @id @default(uuid()) @db.Uuid
-  equipmentId String            @db.Uuid
-  equipment   Equipment         @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
-  type        String            @db.VarChar(120)
-  scheduledAt DateTime          @db.Timestamptz(3)
-  completedAt DateTime?         @db.Timestamptz(3)
-  failureRelated Boolean        @default(false)
-  downtimeHours Decimal         @default(0) @db.Decimal(10, 2)
-  priority    String            @db.VarChar(20)
-  status      MaintenanceStatus @default(SCHEDULED)
-  notes       String            @default("") @db.VarChar(3000)
-  version     Int               @default(1)
-  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  id             String            @id @default(uuid()) @db.Uuid
+  equipmentId    String            @db.Uuid
+  equipment      Equipment         @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  type           String            @db.VarChar(120)
+  scheduledAt    DateTime          @db.Timestamptz(3)
+  completedAt    DateTime?         @db.Timestamptz(3)
+  failureRelated Boolean           @default(false)
+  downtimeHours  Decimal           @default(0) @db.Decimal(10, 2)
+  priority       String            @db.VarChar(20)
+  status         MaintenanceStatus @default(SCHEDULED)
+  notes          String            @default("") @db.VarChar(3000)
+  version        Int               @default(1)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([equipmentId, status, scheduledAt])
   @@map("maintenance_records")

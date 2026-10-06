@@ -2,6 +2,7 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+  meta?: { page: number; limit: number; total: number; totalPages: number };
 }
 export interface User {
   id: string;
@@ -14,6 +15,7 @@ export interface User {
   permissions: string[];
   createdAt: string;
   lastLoginAt: string | null;
+  mustChangePassword: boolean;
 }
 export interface Session {
   accessToken: string;

@@ -37,9 +37,16 @@ interface Equipment {
   version: number;
   allocations: Allocation[];
   maintenance: Maintenance[];
+  utilizationHistory: UtilizationPoint[];
+}
+interface UtilizationPoint {
+  week: string;
+  allocatedHours: number;
+  utilization: number;
 }
 interface Result {
   records: Equipment[];
+  history: UtilizationPoint[];
   summary: {
     total: number;
     available: number;
@@ -102,12 +109,10 @@ export class EquipmentComponent {
     return !!this.auth.user()?.permissions.includes(p);
   }
   load() {
-    this.http
-      .get<ApiResponse<Result>>('/api/v1/equipment')
-      .subscribe({
-        next: (r) => this.data.set(r.data),
-        error: (e) => this.error.set(errorMessage(e)),
-      });
+    this.http.get<ApiResponse<Result>>('/api/v1/equipment').subscribe({
+      next: (r) => this.data.set(r.data),
+      error: (e) => this.error.set(errorMessage(e)),
+    });
     if (this.can('RESOURCE_ALLOCATE'))
       this.http
         .get<ApiResponse<Project[]>>('/api/v1/projects')

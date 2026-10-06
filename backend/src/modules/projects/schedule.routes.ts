@@ -21,6 +21,8 @@ const schema = z
     actualDate: date.nullable(),
     status: z.enum(WorkStatus),
     progress: z.number().int().min(0).max(100),
+    weight: z.coerce.number().positive().max(10000).multipleOf(0.01).default(1),
+    rebaseline: z.boolean().default(false),
     responsibleId: z.uuid().nullable(),
     dependencyId: z.uuid().nullable(),
     version: z.number().int().positive().optional(),
@@ -42,7 +44,7 @@ function save(edit: boolean): import('express').RequestHandler {
   return async (req, res) => {
     const projectId = projectParam(req.params);
     const id = edit ? z.uuid().parse(req.params.id) : undefined;
-    const { version, ...input } = schema.parse(req.body);
+    const { version, rebaseline, ...input } = schema.parse(req.body);
     const actor = req.identity!;
     const item = await db.$transaction(async (tx) => {
       const project = await accessProject(
@@ -116,9 +118,16 @@ function save(edit: boolean): import('express').RequestHandler {
             'This change conflicts with a dependent item. Update its schedule/progress first.',
           );
       }
+      const baseline =
+        !existing || rebaseline
+          ? { baselineStartDate: input.startDate, baselinePlannedDate: input.plannedDate }
+          : {};
       const saved = existing
-        ? await tx.workItem.update({ where: { id }, data: { ...input, version: { increment: 1 } } })
-        : await tx.workItem.create({ data: { ...input, projectId } });
+        ? await tx.workItem.update({
+            where: { id },
+            data: { ...input, ...baseline, version: { increment: 1 } },
+          })
+        : await tx.workItem.create({ data: { ...input, ...baseline, projectId } });
       await projectAudit(
         tx,
         actor,
@@ -126,6 +135,8 @@ function save(edit: boolean): import('express').RequestHandler {
         'WorkItem',
         saved.id,
       );
+      if (existing && rebaseline)
+        await projectAudit(tx, actor, 'SCHEDULE_BASELINE_REVISED', 'WorkItem', saved.id);
       return saved;
     });
     return ok(

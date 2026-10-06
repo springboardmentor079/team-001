@@ -14,6 +14,7 @@ export const rolePermissions: Record<Role, readonly string[]> = {
     'REPORT_EXPORT',
     'DOCUMENT_VIEW',
     'DOCUMENT_UPLOAD',
+    'DOCUMENT_DELETE',
     'BUDGET_VIEW',
     'BUDGET_EDIT',
     'EXPENSE_CREATE',
@@ -72,6 +73,7 @@ export const rolePermissions: Record<Role, readonly string[]> = {
     'REPORT_EXPORT',
     'DOCUMENT_VIEW',
     'DOCUMENT_UPLOAD',
+    'DOCUMENT_DELETE',
   ],
   SITE_ENGINEER: [
     'ACCOUNT_VIEW',

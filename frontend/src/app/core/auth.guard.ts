@@ -5,13 +5,14 @@ import { AuthService } from './auth.service';
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth
-    .restore()
-    .pipe(
-      map((ok) =>
-        ok ? true : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } }),
-      ),
-    );
+  return auth.restore().pipe(
+    map((ok) => {
+      if (!ok) return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+      if (auth.user()?.mustChangePassword && state.url !== '/security')
+        return router.createUrlTree(['/security']);
+      return true;
+    }),
+  );
 };
 export const adminGuard: CanActivateFn = () =>
   inject(AuthService).user()?.permissions.includes('USER_MANAGE') ||

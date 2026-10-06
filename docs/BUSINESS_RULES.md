@@ -15,7 +15,7 @@ This file documents rules that currently exist in code. Planned operational rule
 
 - New passwords require 12-72 characters, at least one uppercase letter, one lowercase letter and one digit, with a maximum of 72 UTF-8 bytes to avoid bcrypt truncation. Bcrypt cost is 12.
 - Access JWTs expire after 15 minutes and include a session identifier. Every protected request verifies the signature, issuer, audience, active user and nonrevoked session against the database.
-- Refresh credentials are random 256-bit values stored as SHA-256 hashes. Refresh rotates the hash with a conditional update, so a stale credential cannot be reused. A rejected replay does not currently revoke the entire session family.
+- Refresh credentials are random 256-bit values stored as SHA-256 hashes. Refresh rotates the hash with a conditional update and stores the consumed hash. Replaying a consumed credential revokes the complete session family. Browser tabs coordinate refreshes with the Web Locks API and synchronize in-memory sessions through BroadcastChannel when those browser APIs are available.
 - A session lasts 12 hours normally, or 7 days with Keep me signed in. Current implementation uses an expiry cookie for both; unchecked does not mean browser-close-only persistence.
 - Refresh cookies are HTTP-only, SameSite=Strict, scoped to /api/v1/auth, and Secure in production. Access tokens live in Angular memory, not localStorage.
 - Refresh/logout require the configured Origin and X-BuildTrack-Client: web. CORS allows the configured application origin only.
@@ -27,11 +27,11 @@ This file documents rules that currently exist in code. Planned operational rule
 ## Access and audit
 
 - The account overview contains only the authenticated user's session count and latest eight audit events, scoped to their organization and identity.
-- Team directory requires USER_MANAGE and filters users by the administrator's organization. It returns organization members alphabetically, including inactive users and last login. Administrators can create and edit members, assign roles, change active status, and request password resets.
+- Team directory requires USER_MANAGE and filters users by the administrator's organization. It supports server-side search, role filtering, sorting and pagination, including inactive users and last login. Administrators can create and edit members, assign roles, change active status, and request password resets.
 - Profile edits can change only name and phone; role/email/company cannot be injected through that endpoint.
 - Registration, login, logout, profile changes and password updates create audit records. No password or raw token is included in an audit entry.
 - Administrators cannot deactivate or demote themselves. Organization-row locking and rechecking the acting administrator serialize competing access changes, preserving an active administrator. Role/email/access changes revoke affected sessions and outstanding reset tokens.
-- Initial passwords use the same validation and hashing policy as registration. No administrator password retrieval exists. Reset requests use the configured mail provider, are audited, and are limited to 20 requests per 15 minutes per IP.
+- Initial passwords use the same validation and hashing policy as registration. Creating a member sends a one-time invitation/reset link, marks the account for a required first-login password change, and blocks other authenticated APIs until the password is changed. No administrator password retrieval exists. Reset requests use the configured mail provider, are audited, and are limited to 20 requests per 15 minutes per IP.
 
 ## Project records
 
@@ -39,25 +39,25 @@ This file documents rules that currently exist in code. Planned operational rule
 - Project codes are unique within an organization. New projects start in Planning. The creator/editor is automatically retained in the assignment list. Other assigned users must be active members of the same organization.
 - Dates must be valid ISO dates, with end date on or after start date. Budget and estimated cost are nonnegative decimal strings with at most two fractional digits, stored as Decimal(16,2). APIs omit both fields unless the caller has BUDGET_VIEW.
 - Allowed transitions: Planning → Active/Cancelled; Active → On Hold/Delayed/Completed/Cancelled; On Hold → Active/Cancelled; Delayed → Active/On Hold/Completed/Cancelled; Completed → Active/Closed. Closed and Cancelled are terminal and cannot be edited.
-- Status is an audited manual declaration. There is no computed progress, milestone gating, financial settlement check or automatic delay detection yet. These remain necessary before production use of project closure.
-- Details, member assignments and status writes are transactional and audited. Project-row locks serialize edits/status changes. Last-write-wins still applies to stale client forms.
-- Search matches name, code or city; status filtering is exact. Project/team list pagination remains pending.
+- Status is an audited manual declaration. Completion and closure apply the schedule, site, document and financial gates described below; analytics compute progress and risk without silently changing project status.
+- Details, member assignments and status writes are transactional and audited. Project-row locks serialize edits/status changes. Last-write-wins still applies to stale project-detail forms.
+- Search matches name, code or city; status filtering is exact. Project and team lists use bounded server-side pagination and allowlisted sort fields when pagination parameters are supplied.
 - Expense APIs do not yet exist. Permission constants are not evidence that those operations are implemented.
 
 ## Schedule and site operations
 
 - Schedule dates must remain inside project dates. Dependencies must belong to the same project, cannot form cycles, and must be due before a dependent starts. Progress cannot begin before the dependency completes.
 - Not-started items require 0%; completed items require 100% and an actual completion date no later than today. Optimistic versions prevent stale schedule, report, delay and inspection updates.
-- Project progress uses an equal-weight average of milestones. If no milestone exists, it uses all tasks. The API states the basis; no hidden weighting is applied.
+- Project progress uses the explicit positive weight of each milestone. If no milestone exists, it uses weighted tasks. Each item retains its initial baseline dates; changing a baseline requires an explicit rebaseline choice and produces an audit event.
 - Completing or closing a project requires at least one milestone, every schedule item completed, no unresolved critical delay, and no unresolved failed/conditional inspection. Closing additionally requires a versioned Contract/Handover document and no pending expenses, unsettled invoices, open purchase orders or pending procurement approvals.
-- One daily report per author, project and date is allowed. Only the author or an administrator can correct it. Site dates cannot predate project start or be in the future.
+- One daily report per author, project and date is allowed. Only the author or an administrator can correct it or attach a verified PDF/JPEG/PNG file. Attachment downloads re-check project access. Site dates cannot predate project start or be in the future.
 
 ## Equipment
 
 - Equipment codes are unique per organization. Allocation writes lock the equipment row, reject overlapping unreleased time ranges and reject conflicts with active maintenance.
 - Operators, when supplied, must be active members of the allocated project. Allocation permission also requires access to that project.
 - Releasing an allocation retains its record and timestamp. Maintenance history is retained. Maintenance cannot be scheduled inside an unreleased allocation, and final maintenance records cannot be reopened.
-- Current utilization is `In Use units / total active units × 100`, rounded to an integer. Historical time-based utilization is not implemented yet.
+- Current utilization is `In Use units / total active units × 100`, rounded to an integer. The fleet and each item also expose 12 completed weekly buckets calculated from persisted allocation intervals, capped to each week and shortened by early release times.
 
 ## Inventory
 
@@ -88,7 +88,7 @@ This file documents rules that currently exist in code. Planned operational rule
 ## Documents, notifications and reports
 
 - Files are limited to 10 MB and PDF, PNG, JPEG, XLSX or DOCX. Both declared MIME type and file signature are checked. Server-generated storage names prevent path traversal; storage paths never appear in API responses.
-- Document versions are serialized by locking the document row. Downloads re-check organization and project visibility. Uploads notify other assigned project members.
+- Document versions are serialized by locking the document row. Downloads and PDF/image inline previews re-check organization and project visibility. Authorized administrators/project managers can delete a document, its versions and stored files; deletion is audited. Uploads notify other assigned project members.
 - PDF and XLSX exports are generated from current authorized database records. The XLSX route additionally requires REPORT_EXPORT.
 
 ## Analytics and integrations

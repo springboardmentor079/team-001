@@ -26,6 +26,7 @@ export const publicUser = (
   permissions: rolePermissions[u.role],
   createdAt: u.createdAt,
   lastLoginAt: u.lastLoginAt,
+  mustChangePassword: u.mustChangePassword,
 });
 export function audit(
   user: Pick<User, 'id' | 'organizationId'>,
@@ -102,23 +103,46 @@ export async function register(data: {
   });
 }
 export async function refresh(raw: string) {
+  const tokenHash = hashToken(raw);
   const session = await db.authSession.findUnique({
-    where: { refreshHash: hashToken(raw) },
+    where: { refreshHash: tokenHash },
     include: { user: { include: { organization: true } } },
   });
-  if (!session || session.revokedAt || session.expiresAt <= new Date() || !session.user.active)
+  if (!session) {
+    const consumed = await db.refreshTokenUse.findUnique({ where: { tokenHash } });
+    if (consumed) {
+      await db.authSession.updateMany({
+        where: { id: consumed.sessionId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new HttpError(401, 'Refresh token reuse detected. Please sign in again.');
+    }
+    throw new HttpError(401, 'Your session has expired. Please sign in.');
+  }
+  if (session.revokedAt || session.expiresAt <= new Date() || !session.user.active)
     throw new HttpError(401, 'Your session has expired. Please sign in.');
   const next = newToken();
-  const update = await db.authSession.updateMany({
-    where: {
-      id: session.id,
-      refreshHash: hashToken(raw),
-      revokedAt: null,
-      expiresAt: { gt: new Date() },
-    },
-    data: { refreshHash: hashToken(next) },
+  const rotated = await db.$transaction(async (tx) => {
+    const update = await tx.authSession.updateMany({
+      where: {
+        id: session.id,
+        refreshHash: tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { refreshHash: hashToken(next) },
+    });
+    if (update.count !== 1) return false;
+    await tx.refreshTokenUse.create({ data: { sessionId: session.id, tokenHash } });
+    return true;
   });
-  if (update.count !== 1) throw new HttpError(401, 'This session has already been refreshed.');
+  if (!rotated) {
+    await db.authSession.updateMany({
+      where: { id: session.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    throw new HttpError(401, 'Refresh token reuse detected. Please sign in again.');
+  }
   return {
     raw: next,
     session,
@@ -184,7 +208,10 @@ export async function resetPassword(token: string, password: string) {
       data: { usedAt: new Date() },
     });
     if (consumed.count !== 1) throw new HttpError(400, 'This reset link has already been used.');
-    await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    await tx.user.update({
+      where: { id: record.userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
     await tx.authSession.updateMany({
       where: { userId: record.userId, revokedAt: null },
       data: { revokedAt: new Date() },

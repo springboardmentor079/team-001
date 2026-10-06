@@ -23,6 +23,7 @@ import { reportsRouter } from './modules/reports/reports.routes';
 import { analyticsRouter } from './modules/analytics/analytics.routes';
 import { assistantRouter } from './modules/assistant/assistant.routes';
 import { mlRouter } from './modules/ml/ml.routes';
+import { searchRouter } from './modules/search/search.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { apiDocument } from './openapi';
 
@@ -60,7 +61,11 @@ const assistantLimiter = rateLimit({
   limit: env.NODE_ENV === 'test' ? 1000 : 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { success: false, message: 'Assistant request limit reached. Please wait a moment.', errors: [] },
+  message: {
+    success: false,
+    message: 'Assistant request limit reached. Please wait a moment.',
+    errors: [],
+  },
 });
 app.use('/api/v1/auth', limiter, authRouter);
 app.get('/api/v1/account/overview', authenticate, async (req, res) => {
@@ -99,6 +104,7 @@ app.use('/api/v1/reports', reportsRouter);
 app.use('/api/v1/analytics', analyticsRouter);
 app.use('/api/v1/assistant', assistantLimiter, assistantRouter);
 app.use('/api/v1/ml', mlRouter);
+app.use('/api/v1/search', searchRouter);
 app.use((_req, _res) => {
   throw new HttpError(404, 'The requested endpoint does not exist.');
 });

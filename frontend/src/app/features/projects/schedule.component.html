@@ -74,6 +74,28 @@
           />
         </div>
         <div class="field">
+          <label for="schedule-weight">Progress weight</label>
+          <input
+            id="schedule-weight"
+            type="number"
+            min="0.01"
+            max="10000"
+            step="0.01"
+            formControlName="weight"
+          />
+          <small class="field-help"
+            >Higher-weight milestones contribute more to overall progress.</small
+          >
+        </div>
+        @if (selected()) {
+          <div class="field">
+            <label
+              ><input type="checkbox" formControlName="rebaseline" /> Set the current dates as a
+              revised baseline</label
+            >
+          </div>
+        }
+        <div class="field">
           <label for="schedule-actual">Actual completion</label
           ><input id="schedule-actual" type="date" formControlName="actualDate" />
         </div>
@@ -133,9 +155,16 @@
           <p>{{ item.description || 'No description.' }}</p>
           <div class="progress-track"><span [style.width.%]="item.progress"></span></div>
           <small
-            >{{ item.progress }}% · {{ item.responsible?.name || 'Unassigned' }}
+            >{{ item.progress }}% · weight {{ item.weight }} ·
+            {{ item.responsible?.name || 'Unassigned' }}
             @if (item.dependencyId) {
               · Has dependency
+            }
+            @if (
+              item.baselinePlannedDate &&
+              item.baselinePlannedDate.slice(0, 10) !== item.plannedDate.slice(0, 10)
+            ) {
+              · baseline {{ item.baselinePlannedDate | date: 'mediumDate' : 'UTC' }}
             }
           </small>
           @if (can('MILESTONE_EDIT')) {

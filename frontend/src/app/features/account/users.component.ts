@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { ApiResponse, errorMessage, roleLabel } from '../../core/models';
 interface Member {
   id: string;
@@ -85,6 +85,30 @@ interface Member {
         {{ error() }}<button class="text-button" (click)="load()">Try again</button>
       </div>
     }
+    <form class="project-filters" [formGroup]="filter" (ngSubmit)="applyFilters()">
+      <div class="field">
+        <label for="team-search">Find a team member</label
+        ><input id="team-search" formControlName="search" placeholder="Search by name or email" />
+      </div>
+      <div class="field">
+        <label for="team-role">Role</label
+        ><select id="team-role" formControlName="role">
+          <option value="">All roles</option>
+          @for (role of roles; track role) {
+            <option [value]="role">{{ label(role) }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="team-sort">Sort by</label
+        ><select id="team-sort" formControlName="sort">
+          <option value="name">Name</option>
+          <option value="createdAt">Recently added</option>
+          <option value="lastLoginAt">Last login</option>
+        </select>
+      </div>
+      <button class="btn primary">Apply filters</button>
+    </form>
     <section class="panel">
       @if (loading()) {
         <div class="skeleton" style="height:200px" aria-label="Loading team" aria-busy="true"></div>
@@ -150,7 +174,21 @@ interface Member {
             </tbody>
           </table>
         </div>
-        <div class="panel-foot">{{ users().length }} team members in your organization.</div>
+        <div class="panel-foot">{{ total() }} team members in your organization.</div>
+        @if (totalPages() > 1) {
+          <div class="pagination">
+            <button class="btn" [disabled]="page() === 1" (click)="changePage(page() - 1)">
+              Previous</button
+            ><span>Page {{ page() }} of {{ totalPages() }}</span
+            ><button
+              class="btn"
+              [disabled]="page() === totalPages()"
+              (click)="changePage(page() + 1)"
+            >
+              Next
+            </button>
+          </div>
+        }
       }
     </section>`,
 })
@@ -177,6 +215,10 @@ export class UsersComponent {
     active: [true],
     password: [''],
   });
+  readonly filter = this.fb.nonNullable.group({ search: [''], role: [''], sort: ['name'] });
+  readonly page = signal(1);
+  readonly total = signal(0);
+  readonly totalPages = signal(1);
   resetPassword(user: Member) {
     if (this.busy()) return;
     this.busy.set(true);
@@ -251,9 +293,19 @@ export class UsersComponent {
   load() {
     this.loading.set(true);
     this.error.set('');
-    this.http.get<ApiResponse<Member[]>>('/api/v1/users').subscribe({
+    const filter = this.filter.getRawValue();
+    let params = new HttpParams()
+      .set('page', this.page())
+      .set('limit', 20)
+      .set('sort', filter.sort)
+      .set('direction', filter.sort === 'name' ? 'asc' : 'desc');
+    if (filter.search.trim()) params = params.set('search', filter.search.trim());
+    if (filter.role) params = params.set('role', filter.role);
+    this.http.get<ApiResponse<Member[]>>('/api/v1/users', { params }).subscribe({
       next: (r) => {
         this.users.set(r.data);
+        this.total.set(r.meta?.total ?? r.data.length);
+        this.totalPages.set(r.meta?.totalPages ?? 1);
         this.loading.set(false);
       },
       error: (e) => {
@@ -261,5 +313,14 @@ export class UsersComponent {
         this.loading.set(false);
       },
     });
+  }
+  applyFilters() {
+    this.page.set(1);
+    this.load();
+  }
+  changePage(page: number) {
+    if (page < 1 || page > this.totalPages()) return;
+    this.page.set(page);
+    this.load();
   }
 }

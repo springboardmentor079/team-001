@@ -16,7 +16,11 @@ const equipmentSchema = z
     type: text(100),
     location: text(200),
     hourlyRate: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/),
-    commissionedAt: z.iso.date().transform((value) => new Date(value + 'T00:00:00Z')).nullable().default(null),
+    commissionedAt: z.iso
+      .date()
+      .transform((value) => new Date(value + 'T00:00:00Z'))
+      .nullable()
+      .default(null),
     serviceIntervalDays: z.number().int().min(1).max(3650).default(90),
     notes: z.string().trim().max(3000).default(''),
     status: z.enum(EquipmentStatus).default('AVAILABLE'),
@@ -37,15 +41,73 @@ const include = {
   },
 };
 equipmentRouter.get('/', async (req, res) => {
-  const records = await db.equipment.findMany({
-    where: { organizationId: req.identity!.organizationId, active: true },
-    include,
-    orderBy: { name: 'asc' },
+  const now = new Date();
+  const firstWeek = new Date(now);
+  firstWeek.setUTCHours(0, 0, 0, 0);
+  firstWeek.setUTCDate(firstWeek.getUTCDate() - ((firstWeek.getUTCDay() + 6) % 7) - 11 * 7);
+  const [records, historicalAllocations] = await Promise.all([
+    db.equipment.findMany({
+      where: { organizationId: req.identity!.organizationId, active: true },
+      include,
+      orderBy: { name: 'asc' },
+    }),
+    db.equipmentAllocation.findMany({
+      where: {
+        equipment: { organizationId: req.identity!.organizationId, active: true },
+        endAt: { gt: firstWeek },
+        startAt: { lt: now },
+      },
+      select: { equipmentId: true, startAt: true, endAt: true, releasedAt: true },
+    }),
+  ]);
+  const weeks = Array.from({ length: 12 }, (_, index) => {
+    const start = new Date(firstWeek.getTime() + index * 7 * 86400000);
+    const end = new Date(Math.min(start.getTime() + 7 * 86400000, now.getTime()));
+    return { start, end, label: start.toISOString().slice(0, 10) };
   });
+  const hoursFor = (equipmentId: string | null, start: Date, end: Date) =>
+    historicalAllocations.reduce((hours, allocation) => {
+      if (equipmentId && allocation.equipmentId !== equipmentId) return hours;
+      const effectiveEnd =
+        allocation.releasedAt && allocation.releasedAt < allocation.endAt
+          ? allocation.releasedAt
+          : allocation.endAt;
+      const overlap = Math.max(
+        0,
+        Math.min(effectiveEnd.getTime(), end.getTime()) -
+          Math.max(allocation.startAt.getTime(), start.getTime()),
+      );
+      return hours + overlap / 3600000;
+    }, 0);
+  const history = weeks.map((week) => {
+    const allocatedHours = hoursFor(null, week.start, week.end);
+    const availableHours = Math.max(
+      1,
+      ((week.end.getTime() - week.start.getTime()) / 3600000) * records.length,
+    );
+    return {
+      week: week.label,
+      allocatedHours: Number(allocatedHours.toFixed(1)),
+      utilization: Math.min(100, Math.round((allocatedHours / availableHours) * 100)),
+    };
+  });
+  const enrichedRecords = records.map((record) => ({
+    ...record,
+    utilizationHistory: weeks.map((week) => {
+      const availableHours = Math.max(1, (week.end.getTime() - week.start.getTime()) / 3600000);
+      const allocatedHours = hoursFor(record.id, week.start, week.end);
+      return {
+        week: week.label,
+        allocatedHours: Number(allocatedHours.toFixed(1)),
+        utilization: Math.min(100, Math.round((allocatedHours / availableHours) * 100)),
+      };
+    }),
+  }));
   const total = records.length,
     inUse = records.filter((row) => row.status === 'IN_USE').length;
   return ok(res, {
-    records,
+    records: enrichedRecords,
+    history,
     summary: {
       total,
       available: records.filter((row) => row.status === 'AVAILABLE').length,

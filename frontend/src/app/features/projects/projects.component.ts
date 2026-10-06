@@ -52,6 +52,9 @@ export class ProjectsComponent {
   readonly editing = signal(false);
   readonly error = signal('');
   readonly message = signal('');
+  readonly page = signal(1);
+  readonly total = signal(0);
+  readonly totalPages = signal(1);
   readonly label = roleLabel;
   readonly statuses = [
     'PLANNING',
@@ -62,7 +65,12 @@ export class ProjectsComponent {
     'CLOSED',
     'CANCELLED',
   ];
-  readonly filter = this.fb.nonNullable.group({ search: [''], status: [''] });
+  readonly filter = this.fb.nonNullable.group({
+    search: [''],
+    status: [''],
+    sort: ['createdAt'],
+    direction: ['desc'],
+  });
   readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9-]+$/)]],
     name: ['', [Validators.required, Validators.maxLength(150)]],
@@ -121,16 +129,34 @@ export class ProjectsComponent {
     } else {
       const filter = this.filter.getRawValue();
       let params = new HttpParams();
+      params = params
+        .set('page', this.page())
+        .set('limit', 12)
+        .set('sort', filter.sort)
+        .set('direction', filter.direction);
       if (filter.search.trim()) params = params.set('search', filter.search.trim());
       if (filter.status) params = params.set('status', filter.status);
       this.http
         .get<ApiResponse<Project[]>>('/api/v1/projects', { params })
         .pipe(finalize(() => this.loading.set(false)))
         .subscribe({
-          next: (r) => this.projects.set(r.data),
+          next: (r) => {
+            this.projects.set(r.data);
+            this.total.set(r.meta?.total ?? r.data.length);
+            this.totalPages.set(r.meta?.totalPages ?? 1);
+          },
           error: (e) => this.error.set(errorMessage(e)),
         });
     }
+  }
+  applyFilters() {
+    this.page.set(1);
+    this.load();
+  }
+  changePage(page: number) {
+    if (page < 1 || page > this.totalPages()) return;
+    this.page.set(page);
+    this.load();
   }
   edit() {
     const p = this.project();

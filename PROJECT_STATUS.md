@@ -4,7 +4,7 @@
 
 The user selected **C:/Users/Anushka/OneDrive/Desktop/Infosys**. A new project-local Git repository on `codex/buildtrack` now contains the Phase 1 Angular 20 / Express 5 TypeScript / Prisma 6 / PostgreSQL foundation. Both nearby repositories remain untouched.
 
-Implemented through Phase 12: secure authentication and administration, project scheduling and closure, site operations, equipment, inventory, workforce, procurement, finance, versioned documents, notifications, PDF/XLSX reports, analytics and provider-safe demo states. A public landing page and persistent contextual assistant now cover the public and authenticated application. Business data is organization/project scoped and persisted in PostgreSQL. See README.md for verified run instructions and production limitations.
+Implemented through Phase 12: secure authentication and administration, project scheduling and closure, site operations, equipment, inventory, workforce, procurement, finance, versioned documents, notifications, PDF/XLSX reports, analytics and provider-safe demo states. The completion pass added global search, invitations and enforced first-login password changes, session-family replay revocation and cross-tab refresh coordination, paginated project/team lists, weighted schedule baselines, daily-report attachments, document preview/deletion and 12-week equipment utilization. A public landing page and persistent contextual assistant cover the public and authenticated application. Business data is organization/project scoped and persisted in PostgreSQL. See README.md for verified run instructions and production limitations.
 
 The following inspection is the historical baseline used to make the implementation decision. References to candidate A/B describe those external repositories, not defects in the new foundation.
 
@@ -130,6 +130,6 @@ Not started: installing dependencies, modifying application code, applying migra
 
 ## Verification record
 
-Both frontend and backend production builds passed. The final local suite includes 27 backend integration/ML tests, 7 Angular unit tests and 20 Playwright workflows. Ten migrations are applied to the development and isolated test databases. Executed results and resolved issues are recorded in docs/VERIFICATION.md.
+Both frontend and backend production builds passed. The final local suite includes 27 backend integration/ML tests, 7 Angular unit tests and 20 Playwright workflows. Fourteen migrations are applied to the development and isolated test databases and were replayed successfully on a fresh database. Executed results and resolved issues are recorded in docs/VERIFICATION.md.
 
 Dockerfiles, development Compose and a CI workflow are supplied. Docker execution is unverified because Docker is unavailable on this host; local Node/PostgreSQL execution, fresh migrations, builds and test suites are verified. External SMTP, storage, weather and camera providers require deployment-specific credentials and configuration.

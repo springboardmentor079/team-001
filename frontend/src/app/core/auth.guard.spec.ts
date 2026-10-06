@@ -33,7 +33,10 @@ describe('Route protection', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: AuthService, useValue: { restore: () => of(true) } },
+        {
+          provide: AuthService,
+          useValue: { restore: () => of(true), user: () => ({ mustChangePassword: false }) },
+        },
       ],
     });
     expect(

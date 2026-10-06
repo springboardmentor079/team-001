@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -28,6 +28,13 @@ interface SiteReport {
   reportedProgress: number;
   safetyObservations: string;
   author: { name: string } | null;
+  attachments: {
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    createdAt: string;
+  }[];
 }
 interface SiteDelay {
   id: string;
@@ -73,6 +80,7 @@ export class SiteComponent {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly message = signal('');
+  @ViewChild('reportAttachment') reportAttachment?: ElementRef<HTMLInputElement>;
   readonly reportForm = this.fb.nonNullable.group({
     reportDate: ['', Validators.required],
     weather: ['', Validators.required],
@@ -137,7 +145,7 @@ export class SiteComponent {
             }
           : this.inspectionForm.getRawValue();
     this.http
-      .post<ApiResponse<unknown>>(
+      .post<ApiResponse<SiteReport>>(
         `/api/v1/projects/${this.projectId}/site/${kind === 'report' ? 'reports' : kind === 'delay' ? 'delays' : 'inspections'}`,
         value,
       )
@@ -146,10 +154,48 @@ export class SiteComponent {
         next: (r) => {
           this.message.set(r.message);
           this.mode.set(null);
-          if (kind === 'report') this.reportForm.reset();
+          if (kind === 'report') {
+            const file = this.reportAttachment?.nativeElement.files?.[0];
+            if (file) this.uploadReportAttachment(r.data.id, file);
+            this.reportForm.reset();
+          }
           if (kind === 'delay') this.delayForm.reset();
           if (kind === 'inspection') this.inspectionForm.reset();
           this.load();
+        },
+        error: (e) => this.error.set(errorMessage(e)),
+      });
+  }
+  uploadReportAttachment(reportId: string, file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    this.http
+      .post<ApiResponse<unknown>>(
+        `/api/v1/projects/${this.projectId}/site/reports/${reportId}/attachments`,
+        body,
+      )
+      .subscribe({
+        next: (response) => {
+          this.message.set(response.message);
+          this.load();
+        },
+        error: (e) => this.error.set(`Report saved, but attachment failed: ${errorMessage(e)}`),
+      });
+  }
+  downloadAttachment(attachment: SiteReport['attachments'][number]) {
+    this.http
+      .get(
+        `/api/v1/projects/${this.projectId}/site/reports/attachments/${attachment.id}/download`,
+        { responseType: 'blob' },
+      )
+      .subscribe({
+        next: (blob) => {
+          const href = URL.createObjectURL(blob),
+            anchor = document.createElement('a');
+          anchor.href = href;
+          anchor.download = attachment.filename;
+          anchor.click();
+          URL.revokeObjectURL(href);
         },
         error: (e) => this.error.set(errorMessage(e)),
       });

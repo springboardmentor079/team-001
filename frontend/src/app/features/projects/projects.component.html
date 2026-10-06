@@ -240,7 +240,7 @@
       ><span>Marked delayed</span>
     </div>
   </div>
-  <form class="project-filters" [formGroup]="filter" (ngSubmit)="load()">
+  <form class="project-filters" [formGroup]="filter" (ngSubmit)="applyFilters()">
     <div class="field">
       <label for="project-search">Find a project</label
       ><input
@@ -248,6 +248,22 @@
         formControlName="search"
         placeholder="Search by name, code or city"
       />
+    </div>
+    <div class="field">
+      <label for="project-sort">Sort by</label
+      ><select id="project-sort" formControlName="sort">
+        <option value="createdAt">Recently created</option>
+        <option value="name">Name</option>
+        <option value="endDate">Completion date</option>
+        <option value="status">Status</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="project-direction">Direction</label
+      ><select id="project-direction" formControlName="direction">
+        <option value="desc">Descending</option>
+        <option value="asc">Ascending</option>
+      </select>
     </div>
     <div class="field">
       <label for="project-filter-status">Status</label
@@ -288,4 +304,14 @@
       </section>
     }
   </div>
+  @if (totalPages() > 1) {
+    <div class="pagination">
+      <button class="btn" [disabled]="page() === 1" (click)="changePage(page() - 1)">
+        Previous</button
+      ><span>Page {{ page() }} of {{ totalPages() }} · {{ total() }} projects</span
+      ><button class="btn" [disabled]="page() === totalPages()" (click)="changePage(page() + 1)">
+        Next
+      </button>
+    </div>
+  }
 }

@@ -44,7 +44,9 @@ const schema = z
     message: 'End date must be on or after the start date.',
   });
 const include = {
-  workItems: { select: { kind: true, progress: true, status: true, plannedDate: true } },
+  workItems: {
+    select: { kind: true, progress: true, status: true, plannedDate: true, weight: true },
+  },
   members: { select: { user: { select: { id: true, name: true, role: true, active: true } } } },
 } as const;
 function scope(user: Identity): Prisma.ProjectWhereInput {
@@ -57,7 +59,13 @@ function visible<
   T extends {
     budget: Prisma.Decimal;
     estimatedCost: Prisma.Decimal;
-    workItems: { kind: string; progress: number; status: string; plannedDate: Date }[];
+    workItems: {
+      kind: string;
+      progress: number;
+      status: string;
+      plannedDate: Date;
+      weight: Prisma.Decimal;
+    }[];
   },
 >(project: T, actor: Identity) {
   const { workItems, ...data } = project;
@@ -87,29 +95,52 @@ projectsRouter.get('/team-options', requirePermission('PROJECT_CREATE'), async (
 });
 projectsRouter.get('/', async (req, res) => {
   const query = z
-    .object({ search: z.string().max(150).optional(), status: z.enum(ProjectStatus).optional() })
+    .object({
+      search: z.string().max(150).optional(),
+      status: z.enum(ProjectStatus).optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+      sort: z.enum(['createdAt', 'name', 'endDate', 'status']).default('createdAt'),
+      direction: z.enum(['asc', 'desc']).default('desc'),
+    })
     .strict()
     .parse(req.query);
-  const projects = await db.project.findMany({
-    where: {
-      ...scope(req.identity!),
-      ...(query.status ? { status: query.status } : {}),
-      ...(query.search
-        ? {
-            OR: [
-              { name: { contains: query.search, mode: 'insensitive' } },
-              { code: { contains: query.search, mode: 'insensitive' } },
-              { city: { contains: query.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    include,
-    orderBy: { createdAt: 'desc' },
-  });
+  const where: Prisma.ProjectWhereInput = {
+    ...scope(req.identity!),
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' } },
+            { code: { contains: query.search, mode: 'insensitive' } },
+            { city: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  };
+  const paginate = query.page !== undefined || query.limit !== undefined;
+  const page = query.page || 1,
+    limit = query.limit || 20;
+  const [projects, total] = await Promise.all([
+    db.project.findMany({
+      where,
+      include,
+      orderBy: { [query.sort]: query.direction },
+      ...(paginate ? { skip: (page - 1) * limit, take: limit } : {}),
+    }),
+    db.project.count({ where }),
+  ]);
   return ok(
     res,
     projects.map((project) => visible(project, req.identity!)),
+    'Success',
+    200,
+    {
+      page,
+      limit: paginate ? limit : Math.max(total, 1),
+      total,
+      totalPages: paginate ? Math.max(1, Math.ceil(total / limit)) : 1,
+    },
   );
 });
 projectsRouter.get('/:id', async (req, res) => {
@@ -246,16 +277,34 @@ projectsRouter.patch('/:id/status', requirePermission('PROJECT_CLOSE'), async (r
     if (status === 'CLOSED') {
       const [handoverDocuments, pendingExpenses, unsettledInvoices, openOrders, pendingRequests] =
         await Promise.all([
-          tx.document.count({ where: { projectId: id, category: { in: ['Contract', 'Handover'], mode: 'insensitive' }, versions: { some: {} } } }),
+          tx.document.count({
+            where: {
+              projectId: id,
+              category: { in: ['Contract', 'Handover'], mode: 'insensitive' },
+              versions: { some: {} },
+            },
+          }),
           tx.expense.count({ where: { projectId: id, status: { in: ['SUBMITTED', 'APPROVED'] } } }),
-          tx.invoice.count({ where: { purchaseOrder: { request: { projectId: id } }, status: { not: 'PAID' } } }),
-          tx.purchaseOrder.count({ where: { request: { projectId: id }, status: { in: ['ISSUED', 'PARTIALLY_RECEIVED'] } } }),
-          tx.procurementRequest.count({ where: { projectId: id, status: { in: ['SUBMITTED', 'APPROVED'] } } }),
+          tx.invoice.count({
+            where: { purchaseOrder: { request: { projectId: id } }, status: { not: 'PAID' } },
+          }),
+          tx.purchaseOrder.count({
+            where: { request: { projectId: id }, status: { in: ['ISSUED', 'PARTIALLY_RECEIVED'] } },
+          }),
+          tx.procurementRequest.count({
+            where: { projectId: id, status: { in: ['SUBMITTED', 'APPROVED'] } },
+          }),
         ]);
       if (!handoverDocuments)
-        throw new HttpError(409, 'Upload at least one versioned Contract or Handover document before closing the project.');
+        throw new HttpError(
+          409,
+          'Upload at least one versioned Contract or Handover document before closing the project.',
+        );
       if (pendingExpenses || unsettledInvoices || openOrders || pendingRequests)
-        throw new HttpError(409, 'Settle pending expenses, invoices, purchase orders and procurement requests before closing the project.');
+        throw new HttpError(
+          409,
+          'Settle pending expenses, invoices, purchase orders and procurement requests before closing the project.',
+        );
     }
     const updated = await tx.project.update({ where: { id }, data: { status }, include });
     await tx.auditLog.create({

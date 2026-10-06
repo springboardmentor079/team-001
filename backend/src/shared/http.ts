@@ -11,15 +11,19 @@ export class HttpError extends Error {
     super(message);
   }
 }
-export function ok(res: Response, data: unknown, message = 'Success', status = 200) {
-  return res.status(status).json({ success: true, message, data });
+export function ok(res: Response, data: unknown, message = 'Success', status = 200, meta?: object) {
+  return res.status(status).json({ success: true, message, data, ...(meta ? { meta } : {}) });
 }
 export function errors(error: unknown, _req: Request, res: Response, _next: NextFunction) {
   const requestId = randomUUID();
   if (error instanceof Error && 'code' in error && error.code === 'LIMIT_FILE_SIZE')
-    return res.status(413).json({ success: false, message: 'File exceeds the 10 MB limit.', errors: [] });
+    return res
+      .status(413)
+      .json({ success: false, message: 'File exceeds the 10 MB limit.', errors: [] });
   if (error instanceof Error && 'code' in error && error.code === 'LIMIT_UNEXPECTED_FILE')
-    return res.status(422).json({ success: false, message: 'Only one document file is allowed.', errors: [] });
+    return res
+      .status(422)
+      .json({ success: false, message: 'Only one document file is allowed.', errors: [] });
   if (error instanceof Error && 'type' in error && error.type === 'entity.too.large')
     return res
       .status(413)

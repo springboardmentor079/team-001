@@ -162,10 +162,14 @@ export const apiDocument = {
     '/api/v1/projects': {
       get: {
         ...secured,
-        summary: 'Projects visible to the caller; optional search/status filters',
+        summary: 'Projects visible to the caller; optional filters, sorting and pagination',
         parameters: [
           { in: 'query', name: 'search', schema: str },
           { in: 'query', name: 'status', schema: str },
+          { in: 'query', name: 'page', schema: { type: 'integer', minimum: 1 } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', minimum: 1, maximum: 100 } },
+          { in: 'query', name: 'sort', schema: { type: 'string', enum: ['name', 'createdAt', 'startDate', 'endDate', 'status'] } },
+          { in: 'query', name: 'direction', schema: { type: 'string', enum: ['asc', 'desc'] } },
         ],
         responses: { 200: response, 403: response, 422: response },
       },
@@ -259,6 +263,20 @@ export const apiDocument = {
         responses: { 201: response, 403: response, 409: response, 422: response },
       },
     },
+    '/api/v1/projects/{projectId}/site/reports/{id}/attachments': {
+      post: {
+        ...secured,
+        summary: 'Attach a validated PDF/JPEG/PNG file to a daily report (multipart, 10 MB maximum)',
+        responses: { 201: response, 403: response, 404: response, 413: response, 422: response },
+      },
+    },
+    '/api/v1/projects/{projectId}/site/reports/attachments/{attachmentId}/download': {
+      get: {
+        ...secured,
+        summary: 'Download an authorized daily-report attachment',
+        responses: { 200: response, 403: response, 404: response },
+      },
+    },
     '/api/v1/projects/{projectId}/site/delays': {
       post: {
         ...secured,
@@ -276,7 +294,7 @@ export const apiDocument = {
     '/api/v1/equipment': {
       get: {
         ...secured,
-        summary: 'Equipment inventory, current allocation/maintenance and utilization',
+        summary: 'Equipment inventory, current state and 12-week time-based utilization',
         responses: { 200: response, 403: response },
       },
       post: {
@@ -387,6 +405,20 @@ export const apiDocument = {
       get: { ...secured, summary: 'List authorized project documents and safe version metadata', responses: { 200: response, 403: response } },
       post: { ...secured, summary: 'Upload a validated document or new version (multipart, 10 MB maximum)', responses: { 201: response, 403: response, 413: response, 422: response } },
     },
+    '/api/v1/documents/{id}': {
+      delete: {
+        ...secured,
+        summary: 'Delete an authorized document, all versions and stored files',
+        responses: { 200: response, 403: response, 404: response },
+      },
+    },
+    '/api/v1/documents/versions/{id}/preview': {
+      get: {
+        ...secured,
+        summary: 'Inline preview for an authorized PDF/JPEG/PNG document version',
+        responses: { 200: response, 404: response, 415: response },
+      },
+    },
     '/api/v1/notifications': {
       get: { ...secured, summary: 'Notifications addressed to the authenticated account', responses: { 200: response } },
     },
@@ -427,6 +459,14 @@ export const apiDocument = {
         responses: { 200: response, 401: response, 403: response },
       },
     },
+    '/api/v1/search': {
+      get: {
+        ...secured,
+        summary: 'Organization and project-scoped global search',
+        parameters: [{ in: 'query', name: 'q', required: true, schema: { type: 'string', minLength: 2, maxLength: 100 } }],
+        responses: { 200: response, 401: response, 422: response },
+      },
+    },
     '/api/v1/users': {
       post: {
         ...secured,
@@ -439,7 +479,15 @@ export const apiDocument = {
       },
       get: {
         ...secured,
-        summary: 'Users in administrator organization',
+        summary: 'Users in administrator organization with optional filters, sorting and pagination',
+        parameters: [
+          { in: 'query', name: 'search', schema: str },
+          { in: 'query', name: 'role', schema: str },
+          { in: 'query', name: 'page', schema: { type: 'integer', minimum: 1 } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', minimum: 1, maximum: 100 } },
+          { in: 'query', name: 'sort', schema: { type: 'string', enum: ['name', 'createdAt', 'lastLoginAt'] } },
+          { in: 'query', name: 'direction', schema: { type: 'string', enum: ['asc', 'desc'] } },
+        ],
         responses: { 200: response, 403: response },
       },
     },

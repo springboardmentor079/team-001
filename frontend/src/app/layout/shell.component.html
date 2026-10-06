@@ -110,6 +110,34 @@
           pageName
         }}</strong>
       </div>
+      <div class="global-search">
+        <bt-icon name="search" />
+        <input
+          aria-label="Search workspace"
+          placeholder="Search workspace"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="search($event)"
+          (focus)="searchResults().length && searchOpen.set(true)"
+        />
+        @if (searchOpen()) {
+          <div class="search-results" role="listbox" aria-label="Workspace search results">
+            @if (searching()) {
+              <div class="search-state">Searching…</div>
+            }
+            @for (result of searchResults(); track result.category + result.id) {
+              <button type="button" role="option" (click)="openResult(result)">
+                <span>{{ result.category }}</span
+                ><strong>{{ result.title }}</strong
+                ><small>{{ result.metadata }}</small>
+              </button>
+            } @empty {
+              @if (!searching()) {
+                <div class="search-state">No matching records.</div>
+              }
+            }
+          </div>
+        }
+      </div>
       <a class="header-profile" routerLink="/profile"
         ><span class="avatar">{{ initials }}</span
         ><span class="profile-meta"

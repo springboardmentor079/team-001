@@ -1,20 +1,35 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { IconComponent } from '../core/icon.component';
-import { errorMessage, roleLabel } from '../core/models';
+import { ApiResponse, errorMessage, roleLabel } from '../core/models';
+interface SearchResult {
+  id: string;
+  category: string;
+  title: string;
+  metadata: string;
+  route: string;
+}
 @Component({
   selector: 'bt-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, IconComponent, FormsModule],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
   readonly auth = inject(AuthService);
   private router = inject(Router);
+  private http = inject(HttpClient);
   readonly collapsed = signal(localStorage.getItem('bt_sidebar') === 'collapsed');
   readonly mobile = signal(false);
   readonly error = signal('');
   readonly signingOut = signal(false);
+  readonly searchQuery = signal('');
+  readonly searchResults = signal<SearchResult[]>([]);
+  readonly searching = signal(false);
+  readonly searchOpen = signal(false);
+  private searchTimer?: ReturnType<typeof setTimeout>;
   readonly label = roleLabel;
   get initials() {
     return (
@@ -60,6 +75,38 @@ export class ShellComponent {
   }
   @HostListener('document:keydown.escape') closeMobile() {
     this.mobile.set(false);
+    this.searchOpen.set(false);
+  }
+  search(value: string) {
+    this.searchQuery.set(value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    const query = value.trim();
+    if (query.length < 2) {
+      this.searchResults.set([]);
+      this.searchOpen.set(false);
+      return;
+    }
+    this.searchTimer = setTimeout(() => {
+      this.searching.set(true);
+      this.http
+        .get<ApiResponse<SearchResult[]>>('/api/v1/search', { params: { q: query } })
+        .subscribe({
+          next: (response) => {
+            this.searchResults.set(response.data);
+            this.searchOpen.set(true);
+            this.searching.set(false);
+          },
+          error: (e) => {
+            this.error.set(errorMessage(e));
+            this.searching.set(false);
+          },
+        });
+    }, 250);
+  }
+  openResult(result: SearchResult) {
+    this.searchOpen.set(false);
+    this.searchQuery.set('');
+    void this.router.navigateByUrl(result.route);
   }
   logout() {
     this.signingOut.set(true);

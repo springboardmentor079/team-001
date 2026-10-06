@@ -2,6 +2,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpBackend, HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import {
   Observable,
+  firstValueFrom,
+  from,
   of,
   catchError,
   finalize,
@@ -20,18 +22,30 @@ export class AuthService {
   private access = '';
   private pending: Observable<boolean> | null = null;
   private attempted = false;
+  private channel?: BroadcastChannel;
+  constructor() {
+    if (typeof BroadcastChannel !== 'undefined') {
+      this.channel = new BroadcastChannel('buildtrack-session');
+      this.channel.onmessage = ({ data }: MessageEvent<{ type: string; value?: Session }>) => {
+        if (data.type === 'session' && data.value) this.session(data.value, false);
+        if (data.type === 'logout') this.clear(false);
+      };
+    }
+  }
   token() {
     return this.access;
   }
-  private session(value: Session) {
+  private session(value: Session, broadcast = true) {
     this.access = value.accessToken;
     this.user.set(value.user);
     this.attempted = true;
+    if (broadcast) this.channel?.postMessage({ type: 'session', value });
   }
-  clear() {
+  clear(broadcast = true) {
     this.access = '';
     this.user.set(null);
     this.attempted = true;
+    if (broadcast) this.channel?.postMessage({ type: 'logout' });
   }
   private headers() {
     return new HttpHeaders({ Authorization: `Bearer ${this.access}` });
@@ -75,13 +89,22 @@ export class AuthService {
   }
   refresh(): Observable<boolean> {
     if (this.pending) return this.pending;
-    this.pending = this.http
-      .post<ApiResponse<Session>>(
+    const request = () =>
+      this.http.post<ApiResponse<Session>>(
         `${this.base}/refresh`,
         {},
         { withCredentials: true, headers: { 'X-BuildTrack-Client': 'web' } },
-      )
-      .pipe(
+      );
+    let response: Observable<ApiResponse<Session>>;
+    if (typeof navigator !== 'undefined' && navigator.locks) {
+      const locked = navigator.locks.request('buildtrack-session-refresh', () =>
+        firstValueFrom(request()),
+      ) as unknown as Promise<ApiResponse<Session>>;
+      response = from(locked);
+    } else {
+      response = request();
+    }
+    this.pending = response.pipe(
         tap((r) => this.session(r.data)),
         map(() => true),
         catchError(() => {

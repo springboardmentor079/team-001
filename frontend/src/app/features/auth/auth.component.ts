@@ -108,7 +108,11 @@ export class AuthComponent {
           next: () => {
             const target = this.route.snapshot.queryParamMap.get('returnUrl');
             void this.router.navigateByUrl(
-              target?.startsWith('/') && !target.startsWith('//') ? target : '/workspace',
+              this.auth.user()?.mustChangePassword
+                ? '/security'
+                : target?.startsWith('/') && !target.startsWith('//')
+                  ? target
+                  : '/workspace',
             );
           },
           error: fail,

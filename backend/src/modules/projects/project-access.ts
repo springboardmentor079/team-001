@@ -40,16 +40,25 @@ export async function projectAudit(
   });
 }
 export function scheduleSummary(
-  items: { kind: string; progress: number; status: string; plannedDate: Date }[],
+  items: {
+    kind: string;
+    progress: number;
+    status: string;
+    plannedDate: Date;
+    weight?: Prisma.Decimal | number | string;
+  }[],
 ) {
   const milestones = items.filter((item) => item.kind === 'MILESTONE');
   const basis = milestones.length ? milestones : items;
   const today = new Date().toISOString().slice(0, 10);
   return {
     progress: basis.length
-      ? Math.round(basis.reduce((sum, item) => sum + item.progress, 0) / basis.length)
+      ? Math.round(
+          basis.reduce((sum, item) => sum + item.progress * Number(item.weight ?? 1), 0) /
+            basis.reduce((sum, item) => sum + Number(item.weight ?? 1), 0),
+        )
       : 0,
-    basis: milestones.length ? 'Equal-weight milestone average' : 'Equal-weight task average',
+    basis: milestones.length ? 'Weighted milestone average' : 'Weighted task average',
     total: items.length,
     completed: items.filter((item) => item.status === 'COMPLETED').length,
     overdue: items.filter(

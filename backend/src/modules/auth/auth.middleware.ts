@@ -48,6 +48,12 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     throw new HttpError(401, 'Your session has ended. Please sign in.');
   req.identity = session.user;
   req.sessionId = session.id;
+  if (
+    session.user.mustChangePassword &&
+    req.originalUrl !== '/api/v1/auth/me' &&
+    req.originalUrl !== '/api/v1/auth/change-password'
+  )
+    throw new HttpError(403, 'Change your temporary password before using the workspace.');
   next();
 }
 export const requirePermission =

@@ -65,6 +65,10 @@
           ><textarea [id]="'report-' + f[0]" [formControlName]="f[0]" rows="2"></textarea>
         </div>
       }
+      <div class="field">
+        <label for="report-attachment">Photo or PDF attachment (optional, max 10 MB)</label>
+        <input #reportAttachment id="report-attachment" type="file" accept=".pdf,.png,.jpg,.jpeg" />
+      </div>
       <div class="member-actions">
         <button class="btn primary">Save report</button
         ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
@@ -161,6 +165,15 @@
         <p>{{ r.workersPresent }} workers · {{ r.weather }}</p>
         @if (r.safetyObservations) {
           <small>Safety: {{ r.safetyObservations }}</small>
+        }
+        @if (r.attachments.length) {
+          <div class="member-actions">
+            @for (attachment of r.attachments; track attachment.id) {
+              <button class="text-button" (click)="downloadAttachment(attachment)">
+                {{ attachment.filename }}
+              </button>
+            }
+          </div>
         }
       </article>
     } @empty {

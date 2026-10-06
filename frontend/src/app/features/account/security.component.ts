@@ -15,6 +15,11 @@ import { errorMessage } from '../../core/models';
         <p>A safer workspace starts with your account.</p>
       </div>
     </div>
+    @if (auth.user()?.mustChangePassword) {
+      <div class="notice warning" role="alert">
+        Change the temporary password before entering the workspace.
+      </div>
+    }
     <div class="settings-grid">
       <section class="panel settings-form">
         <div class="panel-heading">
@@ -75,7 +80,7 @@ import { errorMessage } from '../../core/models';
     </div>`,
 })
 export class SecurityComponent {
-  private auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private fb = inject(FormBuilder);
   private router = inject(Router);
   readonly busy = signal(false);

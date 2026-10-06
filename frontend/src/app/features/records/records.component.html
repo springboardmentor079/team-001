@@ -1,5 +1,136 @@
-<div class="page-heading"><div><span class="eyebrow dark">CONTROLLED RECORDS</span><h1>Documents & reports<span class="orange">.</span></h1><p>Project-scoped file versions and exports generated from live records.</p></div>@if (can('DOCUMENT_UPLOAD')) { <button class="btn primary" (click)="showUpload.set(true)">Upload document</button> }</div>
-@if (error()) { <div class="notice error" role="alert">{{ error() }}</div> } @if (message()) { <div class="notice success" role="status">{{ message() }}</div> }
-@if (showUpload()) { <section class="panel project-form"><h2>{{ form.controls.documentId.value ? 'Upload new version' : 'Upload document' }}</h2><form [formGroup]="form" (ngSubmit)="upload()"><div class="project-fields"><div class="field"><label for="doc-project">Project</label><select id="doc-project" formControlName="projectId"><option value="">Select project</option>@for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div><div class="field"><label for="doc-title">Document title</label><input id="doc-title" formControlName="title"></div><div class="field"><label for="doc-category">Category</label><select id="doc-category" formControlName="category"><option>Drawing</option><option>Contract</option><option>Inspection</option><option>Safety</option><option>Invoice</option><option>Other</option></select></div><div class="field"><label for="doc-file">File (PDF, PNG, JPEG, XLSX or DOCX; max 10 MB)</label><input #fileInput id="doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx"></div></div><div class="member-actions"><button class="btn primary" [disabled]="busy()">{{ busy() ? 'Uploading…' : 'Upload file' }}</button><button type="button" class="btn" (click)="showUpload.set(false)">Cancel</button></div></form></section> }
-<section class="panel project-info"><h2>Report center</h2><p>Exports are generated on demand from authorized project data.</p><div class="member-actions"><div class="field"><label for="report-project">Project</label><select id="report-project" [value]="reportProjectId()" (change)="reportProjectId.set($any($event.target).value)">@for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div><button class="btn" (click)="downloadReport('pdf')">Download project PDF</button>@if (can('REPORT_EXPORT')) { <button class="btn" (click)="downloadReport('xlsx')">Download expenses XLSX</button> }</div></section>
-<section class="panel"><div class="table-scroll"><table><thead><tr><th>Project</th><th>Document</th><th>Category</th><th>Latest version</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>@for (doc of documents(); track doc.id) { @if (doc.versions[0]; as latest) { <tr><td>{{ doc.project.name }}</td><td><strong>{{ doc.title }}</strong><small>{{ latest.filename }}</small></td><td>{{ doc.category }}</td><td>v{{ latest.version }} · {{ latest.size / 1024 | number: '1.0-1' }} KB</td><td>{{ latest.createdAt | date: 'medium' }}<small>{{ latest.uploadedBy?.name }}</small></td><td><button class="text-button" (click)="downloadVersion(latest)">Download</button>@if (can('DOCUMENT_UPLOAD')) { <button class="text-button" (click)="chooseVersion(doc)">New version</button> }</td></tr> } } @empty { <tr><td colspan="6">No project documents uploaded.</td></tr> }</tbody></table></div></section>
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">CONTROLLED RECORDS</span>
+    <h1>Documents & reports<span class="orange">.</span></h1>
+    <p>Project-scoped file versions and exports generated from live records.</p>
+  </div>
+  @if (can('DOCUMENT_UPLOAD')) {
+    <button class="btn primary" (click)="showUpload.set(true)">Upload document</button>
+  }
+</div>
+@if (error()) {
+  <div class="notice error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (showUpload()) {
+  <section class="panel project-form">
+    <h2>{{ form.controls.documentId.value ? 'Upload new version' : 'Upload document' }}</h2>
+    <form [formGroup]="form" (ngSubmit)="upload()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="doc-project">Project</label
+          ><select id="doc-project" formControlName="projectId">
+            <option value="">Select project</option>
+            @for (p of projects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="doc-title">Document title</label
+          ><input id="doc-title" formControlName="title" />
+        </div>
+        <div class="field">
+          <label for="doc-category">Category</label
+          ><select id="doc-category" formControlName="category">
+            <option>Drawing</option>
+            <option>Contract</option>
+            <option>Inspection</option>
+            <option>Safety</option>
+            <option>Invoice</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="doc-file">File (PDF, PNG, JPEG, XLSX or DOCX; max 10 MB)</label
+          ><input #fileInput id="doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" />
+        </div>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary" [disabled]="busy()">
+          {{ busy() ? 'Uploading…' : 'Upload file' }}</button
+        ><button type="button" class="btn" (click)="showUpload.set(false)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+<section class="panel project-info">
+  <h2>Report center</h2>
+  <p>Exports are generated on demand from authorized project data.</p>
+  <div class="member-actions">
+    <div class="field">
+      <label for="report-project">Project</label
+      ><select
+        id="report-project"
+        [value]="reportProjectId()"
+        (change)="reportProjectId.set($any($event.target).value)"
+      >
+        @for (p of projects(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn" (click)="downloadReport('pdf')">Download project PDF</button>
+    @if (can('REPORT_EXPORT')) {
+      <button class="btn" (click)="downloadReport('xlsx')">Download expenses XLSX</button>
+    }
+  </div>
+</section>
+<section class="panel">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Document</th>
+          <th>Category</th>
+          <th>Latest version</th>
+          <th>Uploaded</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (doc of documents(); track doc.id) {
+          @if (doc.versions[0]; as latest) {
+            <tr>
+              <td>{{ doc.project.name }}</td>
+              <td>
+                <strong>{{ doc.title }}</strong
+                ><small>{{ latest.filename }}</small>
+              </td>
+              <td>{{ doc.category }}</td>
+              <td>v{{ latest.version }} · {{ latest.size / 1024 | number: '1.0-1' }} KB</td>
+              <td>
+                {{ latest.createdAt | date: 'medium' }}<small>{{ latest.uploadedBy?.name }}</small>
+              </td>
+              <td>
+                @if (canPreview(latest)) {
+                  <button class="text-button" (click)="previewVersion(latest)">Preview</button>
+                }
+                <button class="text-button" (click)="downloadVersion(latest)">Download</button>
+                @if (can('DOCUMENT_UPLOAD')) {
+                  <button class="text-button" (click)="chooseVersion(doc)">New version</button>
+                }
+                @if (can('DOCUMENT_DELETE')) {
+                  <button
+                    class="text-button danger-text"
+                    [disabled]="busy()"
+                    (click)="deleteDocument(doc)"
+                  >
+                    Delete
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        } @empty {
+          <tr>
+            <td colspan="6">No project documents uploaded.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

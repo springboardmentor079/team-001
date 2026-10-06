@@ -61,7 +61,7 @@ flowchart LR
 
 Base `/api/v1`; Swagger at `/api/docs`. Resources follow the master list: auth, users, projects, project milestones, site-progress, site-activities, delays, inspections, resources, resource-allocations, maintenance, inventory, material-requests, material-allocations, workers, attendance, shifts, vendors, procurement, purchase-orders, invoices, budgets, expenses, notifications, reports, documents, analytics, audit-logs.
 
-Success: `{success:true,message,data}`. Paginated lists additionally provide `{page,limit,total,totalPages}`. Errors: `{success:false,message,errors}` with safe field-level details. Bound pagination, allowlist sortable/filterable fields, use typed decimals, reject unexpected privilege fields, and sanitize unexpected errors. Include request IDs in logs without logging credentials/tokens.
+Success: `{success:true,message,data}`. Paginated lists additionally provide `meta:{page,limit,total,totalPages}`. Errors: `{success:false,message,errors}` with safe field-level details. Bound pagination, allowlist sortable/filterable fields, use typed decimals, reject unexpected privilege fields, and sanitize unexpected errors. Include request IDs in logs without logging credentials/tokens.
 
 ## Authentication and authorization
 

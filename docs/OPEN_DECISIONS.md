@@ -32,8 +32,8 @@ Detailed calculations will be written in `docs/BUSINESS_RULES.md` alongside thei
 
 ## Current implementation choices (2026-10-06)
 
-- Organization administrators manage member roles, access and reset requests. Initial passwords are entered by the administrator; invitations and forced first-login changes remain pending.
+- Organization administrators manage member roles, access and reset requests. New members receive a one-time link through the configured mail provider and must change their temporary password before using workspace APIs.
 - Assignment permits reading basic project information and roster; budget/estimate fields require BUDGET_VIEW. Admins see their entire organization; managers and other readers see assigned projects.
 - Schedule dates use PostgreSQL DATE and UTC date-only rendering. Account timestamps still follow browser timezone.
 - Project completion and closure require completed schedule work, no unresolved critical delay or failed/conditional inspection, a versioned Contract or Handover document for closure, and settled finance/procurement records.
-- Project and team lists currently return all scoped records. Pagination and broader concurrent-edit protection remain outstanding; version checks already protect core project, equipment and maintenance edits.
+- Project and team lists support bounded server-side pagination, filtering and allowlisted sorting. Version checks protect schedule/site/equipment/maintenance edits; stale project-detail and team-member forms remain a future hardening option.

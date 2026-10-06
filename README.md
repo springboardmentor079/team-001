@@ -4,9 +4,9 @@ Construction project management and site monitoring, built incrementally with An
 
 ## Current release: complete local milestone implementation
 
-Implemented and connected to PostgreSQL: registration, login, refresh/logout, password reset, password change, profile updates, six seeded roles, server-side permission checking, organization-isolated team administration (create, edit, role assignment, activation/deactivation, reset delivery and last login), account overview, audit activity, responsive navigation, loading/error states and API documentation.
+Implemented and connected to PostgreSQL: registration, login, refresh/logout, password reset, forced first-login password changes, profile updates, six seeded roles, server-side permission checking, organization-isolated team administration (invitation delivery, create, edit, role assignment, activation/deactivation, reset delivery, pagination and last login), account overview, audit activity, responsive navigation, global search, loading/error states and API documentation.
 
-Project records support create/edit, explicit team assignment, details, search/status filters, budget/estimate amounts and validated closure. Dependency-aware schedules, site controls, equipment, inventory, workforce, procurement, finance, documents, notifications, exports and cross-module analytics are persisted and permission-scoped. Payroll is labeled as an approved-hours estimate; weather is labeled as demo data and camera feeds remain visibly unconfigured. Demonstration records are added idempotently by the development seed.
+Project records support create/edit, explicit team assignment, server-side pagination/sorting, details, search/status filters, budget/estimate amounts and validated closure. Dependency-aware weighted schedules retain original baselines, daily reports accept verified attachments, equipment shows 12 weeks of time-based utilization, and document records support preview and deletion. Inventory, workforce, procurement, finance, notifications, exports and cross-module analytics are persisted and permission-scoped. Payroll is labeled as an approved-hours estimate; weather is labeled as demo data and camera feeds remain visibly unconfigured. Demonstration records are added idempotently by the development seed.
 
 ML Insights adds organization-scoped models for schedule-delay probability, material demand, cost at completion and equipment failure risk. Equipment now records commissioning date, service interval, failure-related maintenance and downtime so the maintenance classifier can train from reliable outcomes. Models expose their sample requirements, readiness and diagnostic limitations. Insufficient history returns no prediction, and predictions never change operational records automatically.
 
@@ -112,7 +112,7 @@ Production refuses local mail and a non-HTTPS application origin. The local file
 
 ## API and database
 
-Database tables currently migrated: **organizations, users, auth_sessions, password_reset_tokens, audit_logs, projects, project_members, work_items, site_reports, site_delays, inspections, equipment, equipment_allocations, maintenance_records, materials, material_requests, stock_movements, worker_profiles, worker_project_assignments, attendance, shifts, vendors, procurement_requests, purchase_orders, goods_receipts, invoices, budget_allocations, expenses, documents, document_versions, notifications**. Ten versioned migrations are applied. UUID identifiers, indexed relationships, timezone-aware timestamps and decimal money/rate fields are used. Roles are an enum; permissions are centralized code.
+Database tables currently migrated: **organizations, users, auth_sessions, refresh_token_uses, password_reset_tokens, audit_logs, projects, project_members, work_items, site_reports, site_report_attachments, site_delays, inspections, equipment, equipment_allocations, maintenance_records, materials, material_requests, stock_movements, worker_profiles, worker_project_assignments, attendance, shifts, vendors, procurement_requests, purchase_orders, goods_receipts, invoices, budget_allocations, expenses, documents, document_versions, notifications**. Fourteen versioned migrations are applied. UUID identifiers, indexed relationships, timezone-aware timestamps and decimal money/rate fields are used. Roles are an enum; permissions are centralized code.
 
 | Method      | Endpoint                                                        |
 | ----------- | --------------------------------------------------------------- |
@@ -121,6 +121,7 @@ Database tables currently migrated: **organizations, users, auth_sessions, passw
 | POST        | /api/v1/auth/forgot-password, /reset-password, /change-password |
 | GET / PATCH | /api/v1/auth/me                                                 |
 | GET         | /api/v1/account/overview                                        |
+| GET         | /api/v1/search                                                   |
 | GET / POST  | /api/v1/users (organization administrator only)                 |
 | PATCH       | /api/v1/users/:id                                               |
 | POST        | /api/v1/users/:id/reset-password                                |
@@ -143,6 +144,7 @@ Database tables currently migrated: **organizations, users, auth_sessions, passw
 | POST/PATCH  | /api/v1/procurement/orders/:id/receipts, invoice/request status |
 | GET / POST  | /api/v1/finance, /finance/budgets, /finance/expenses            |
 | GET / POST  | /api/v1/documents, /notifications                               |
+| GET/DELETE  | /api/v1/documents/versions/:id/preview, /documents/:id           |
 | GET         | /api/v1/reports/*.pdf, /reports/*.xlsx, /analytics              |
 | POST        | /api/v1/assistant/public, /assistant/message                    |
 | GET         | /api/v1/ml                                                    |
@@ -203,13 +205,12 @@ For a production release: build with Node 24, provision PostgreSQL and a least-p
 
 ## Known limitations
 
-- Project progress is an equal-weight milestone average (or task average when no milestones exist). Custom milestone weights and baseline revisions remain pending. Closure checks schedule, critical issues, inspections, required Contract/Handover documents and unsettled financial/procurement records.
-- Daily reports currently store structured text fields without file attachments. Weekly summaries are derived from daily reports. Inspection and delay corrections retain audit events but do not yet store field-level revision snapshots.
-- Equipment supports exclusive time allocations, release history and maintenance conflicts. Utilization is the percentage currently marked In Use; historical time-based utilization charts remain pending.
-- Team administration and project assignment are functional. Invitations, forced first-login password changes, custom roles, pagination and concurrent-edit conflict detection remain pending. Project and team lists currently return all visible records.
-- Refresh rotation rejects stale credentials but has no session-family replay revocation. Cross-tab refresh coordination is not yet implemented.
+- Project progress uses explicit work-item weights and retains original schedule baselines. Inspection and delay corrections retain audit events but do not store field-level before/after snapshots, and stale project/team forms do not yet carry record versions.
+- The six requested roles are fixed in the schema and permission map. Organization-defined custom roles are outside the current requirements.
 - SMTP delivery has no durable outbox/retry queue. Development mail is file-backed.
-- Public signup creates an isolated client organization; invitation/provisioning policy remains open.
+- Local uploads are suitable for development. A production object-storage adapter, malware scanning and retention policy require a selected provider and credentials.
+- Public signup creates an isolated client organization. The product policy for disabling public signup in favor of administrator-only onboarding remains configurable deployment work.
+- Weather remains labeled demonstration data and cameras remain unconfigured until providers and credentials are selected. SMS is optional and unconfigured.
 - Account timestamps use the browser timezone. Project schedule dates are PostgreSQL DATE values and are displayed as date-only UTC to prevent day shifts.
-- Browser verification covers desktop and 390px mobile layouts, not every browser/device.
-- Docker and hosted CI have not been executed on this host; local builds, security audit, fresh migrations and regression suites are the available evidence. No production-readiness claim is made.
+- Browser verification covers Edge desktop and 390px mobile emulation, not every browser/device.
+- Docker and hosted CI have not been executed on this host. Production SMTP, object storage, live integrations, TLS, backups, monitoring and deployment need external infrastructure and credentials, so no production-readiness claim is made.

@@ -1,5 +1,9 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { Router } from 'express';
 import { DelayStatus, InspectionResult } from '@prisma/client';
+import multer from 'multer';
 import { z } from 'zod';
 import { db } from '../../shared/db';
 import { HttpError, ok } from '../../shared/http';
@@ -12,6 +16,20 @@ const projectParam = (params: object) =>
   z.uuid().parse((params as Record<string, string>).projectId);
 const date = z.iso.date().transform((value) => new Date(value + 'T00:00:00Z'));
 const detail = z.string().trim().max(5000).default('');
+const attachmentRoot = path.resolve(process.cwd(), '.local', 'site-attachments');
+const attachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+});
+const attachmentTypes = new Set(['application/pdf', 'image/png', 'image/jpeg']);
+function validAttachment(file: Express.Multer.File) {
+  const hex = file.buffer.subarray(0, 8).toString('hex');
+  return file.mimetype === 'application/pdf'
+    ? file.buffer.subarray(0, 4).toString() === '%PDF'
+    : file.mimetype === 'image/png'
+      ? hex.startsWith('89504e470d0a1a0a')
+      : hex.startsWith('ffd8ff');
+}
 const reportSchema = z
   .object({
     reportDate: date,
@@ -40,7 +58,13 @@ siteRouter.get('/', async (req, res) => {
   const [reports, delays, inspections, activity] = await Promise.all([
     db.siteReport.findMany({
       where: { projectId },
-      include: { author: { select: { name: true } } },
+      include: {
+        author: { select: { name: true } },
+        attachments: {
+          select: { id: true, filename: true, mimeType: true, size: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
       orderBy: { reportDate: 'desc' },
     }),
     db.siteDelay.findMany({
@@ -126,6 +150,69 @@ function saveReport(edit: boolean): import('express').RequestHandler {
     return ok(res, report, 'Daily report saved.', edit ? 200 : 201);
   };
 }
+siteRouter.post('/reports/:id/attachments', attachmentUpload.single('file'), async (req, res) => {
+  const projectId = projectParam(req.params),
+    id = z.uuid().parse(req.params.id),
+    actor = req.identity!,
+    file = req.file;
+  await accessProject(db, projectId, actor, 'SITE_REPORT_CREATE', true);
+  const report = await db.siteReport.findFirst({ where: { id, projectId } });
+  if (!report) throw new HttpError(404, 'Daily report not found.');
+  if (actor.role !== 'ADMINISTRATOR' && report.authorId !== actor.id)
+    throw new HttpError(403, 'Only the report author or an administrator can attach files.');
+  if (!file) throw new HttpError(422, 'Choose a file to attach.');
+  if (!attachmentTypes.has(file.mimetype) || !validAttachment(file))
+    throw new HttpError(422, 'Attach a valid PDF, PNG or JPEG file.');
+  await mkdir(attachmentRoot, { recursive: true });
+  const extension = path.extname(file.originalname).toLowerCase().slice(0, 10),
+    storagePath = path.join(attachmentRoot, `${randomUUID()}${extension}`);
+  await writeFile(storagePath, file.buffer, { flag: 'wx' });
+  try {
+    const attachment = await db.$transaction(async (tx) => {
+      const saved = await tx.siteReportAttachment.create({
+        data: {
+          reportId: id,
+          filename: path.basename(file.originalname),
+          mimeType: file.mimetype,
+          size: file.size,
+          storagePath,
+          checksum: createHash('sha256').update(file.buffer).digest('hex'),
+        },
+      });
+      await projectAudit(tx, actor, 'SITE_REPORT_ATTACHMENT_ADDED', 'Project', projectId);
+      return {
+        id: saved.id,
+        filename: saved.filename,
+        mimeType: saved.mimeType,
+        size: saved.size,
+        createdAt: saved.createdAt,
+      };
+    });
+    return ok(res, attachment, 'Attachment uploaded.', 201);
+  } catch (error) {
+    await unlink(storagePath).catch(() => undefined);
+    throw error;
+  }
+});
+siteRouter.get('/reports/attachments/:attachmentId/download', async (req, res) => {
+  const projectId = projectParam(req.params),
+    attachmentId = z.uuid().parse(req.params.attachmentId),
+    actor = req.identity!;
+  await accessProject(db, projectId, actor, 'SITE_REPORT_VIEW');
+  const attachment = await db.siteReportAttachment.findFirst({
+    where: { id: attachmentId, report: { projectId } },
+  });
+  if (!attachment) throw new HttpError(404, 'Attachment not found.');
+  const bytes = await readFile(attachment.storagePath).catch(() => null);
+  if (!bytes) throw new HttpError(404, 'Stored attachment is unavailable.');
+  res.setHeader('Content-Type', attachment.mimeType);
+  res.setHeader('Content-Length', bytes.length);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`,
+  );
+  return res.send(bytes);
+});
 const delaySchema = z
   .object({
     date,

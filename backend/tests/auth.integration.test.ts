@@ -39,6 +39,7 @@ beforeAll(async () => {
   await db.project.deleteMany();
   await db.auditLog.deleteMany();
   await db.passwordReset.deleteMany();
+  await db.refreshTokenUse.deleteMany();
   await db.authSession.deleteMany();
   await db.user.deleteMany();
   await db.organization.deleteMany();
@@ -103,12 +104,17 @@ test('administrator manages members with tenant isolation and session revocation
     .send(member);
   expect(created.status).toBe(201);
   expect(created.body.data.passwordHash).toBeUndefined();
+  expect(created.body.data.mustChangePassword).toBe(true);
   const id = created.body.data.id;
   expect((await db.user.findUniqueOrThrow({ where: { id } })).organizationId).toBe(adminOrg);
+  expect(await db.passwordReset.count({ where: { userId: id, usedAt: null } })).toBe(1);
   const login = await request(app)
     .post('/api/v1/auth/login')
     .send({ email: member.email, password });
   const token = login.body.data.accessToken;
+  expect(
+    (await request(app).get('/api/v1/projects').set('Authorization', `Bearer ${token}`)).status,
+  ).toBe(403);
   const update = { name: member.name, email: member.email, role: 'SITE_ENGINEER', active: true };
   expect(
     (
@@ -211,6 +217,12 @@ test('project workflow validates dates, assignments, finance visibility and stat
   expect(created.status).toBe(201);
   const id = created.body.data.id;
   expect(created.body.data.members[0].user.id).toBe(admin.id);
+  const page = await request(app)
+    .get('/api/v1/projects?page=1&limit=1&sort=name&direction=asc')
+    .set(auth);
+  expect(page.status).toBe(200);
+  expect(page.body.data).toHaveLength(1);
+  expect(page.body.meta).toMatchObject({ page: 1, limit: 1, total: 1, totalPages: 1 });
   expect(
     (
       await request(app)
@@ -340,6 +352,18 @@ test('project workflow validates dates, assignments, finance visibility and stat
     .set(auth)
     .send(reportPayload);
   expect(report.status).toBe(201);
+  const attachment = await request(app)
+    .post(`/api/v1/projects/${id}/site/reports/${report.body.data.id}/attachments`)
+    .set(auth)
+    .attach('file', Buffer.from('%PDF-1.4\n%%EOF'), {
+      filename: 'site-photo-report.pdf',
+      contentType: 'application/pdf',
+    });
+  expect(attachment.status).toBe(201);
+  const attachmentDownload = await request(app)
+    .get(`/api/v1/projects/${id}/site/reports/attachments/${attachment.body.data.id}/download`)
+    .set(auth);
+  expect(attachmentDownload.status).toBe(200);
   expect(
     (await request(app).post(`/api/v1/projects/${id}/site/reports`).set(auth).send(reportPayload))
       .status,
@@ -371,8 +395,12 @@ test('project workflow validates dates, assignments, finance visibility and stat
     ).status,
   ).toBe(200);
   expect(
-    (await request(app).patch(`/api/v1/projects/${id}/status`).set(auth).send({ status: 'COMPLETED' }))
-      .status,
+    (
+      await request(app)
+        .patch(`/api/v1/projects/${id}/status`)
+        .set(auth)
+        .send({ status: 'COMPLETED' })
+    ).status,
   ).toBe(200);
   expect(
     (await request(app).patch(`/api/v1/projects/${id}/status`).set(auth).send({ status: 'CLOSED' }))
@@ -408,7 +436,25 @@ test('project workflow validates dates, assignments, finance visibility and stat
     .get('/api/v1/projects?search=Integration&status=CLOSED')
     .set(auth);
   expect(filtered.body.data).toHaveLength(1);
+  const search = await request(app).get('/api/v1/search?q=Integration').set(auth);
+  expect(search.status).toBe(200);
+  expect(search.body.data).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ category: 'Project', id, route: `/projects/${id}` }),
+    ]),
+  );
+  expect(
+    (
+      await request(app)
+        .get('/api/v1/search?q=Integration')
+        .set('Authorization', `Bearer ${clientToken}`)
+    ).body.data,
+  ).toHaveLength(0);
+  const storedAttachment = await db.siteReportAttachment.findUniqueOrThrow({
+    where: { id: attachment.body.data.id },
+  });
   await db.project.delete({ where: { id } });
+  await unlink(storedAttachment.storagePath).catch(() => undefined);
   await db.user.delete({ where: { id: assigned.id } });
 });
 
@@ -513,6 +559,13 @@ test('equipment allocation prevents overlaps and preserves release and maintenan
   ).toBe(200);
   const directory = await request(app).get('/api/v1/equipment').set(auth);
   expect(directory.body.data.summary.total).toBe(1);
+  expect(directory.body.data.history).toHaveLength(12);
+  expect(
+    directory.body.data.history.some(
+      (point: { allocatedHours: number }) => point.allocatedHours > 0,
+    ),
+  ).toBe(true);
+  expect(directory.body.data.records[0].utilizationHistory).toHaveLength(12);
   expect(directory.body.data.records[0].maintenance).toHaveLength(0);
   expect(await db.equipmentAllocation.count({ where: { equipmentId } })).toBe(1);
   expect(await db.maintenanceRecord.count({ where: { equipmentId } })).toBe(1);
@@ -544,33 +597,27 @@ test('inventory allocation is transactional and never oversubscribes stock', asy
       members: { create: { userId: admin.id } },
     },
   });
-  const material = await request(app)
-    .post('/api/v1/inventory/materials')
-    .set(auth)
-    .send({
-      sku: 'CEM-001',
-      name: 'OPC Cement',
-      category: 'Cement',
-      unit: 'bags',
-      currentStock: '100',
-      minimumLevel: '30',
-      criticalLevel: '10',
-      unitCost: '420.50',
-      supplier: 'Test Supplier',
-    });
+  const material = await request(app).post('/api/v1/inventory/materials').set(auth).send({
+    sku: 'CEM-001',
+    name: 'OPC Cement',
+    category: 'Cement',
+    unit: 'bags',
+    currentStock: '100',
+    minimumLevel: '30',
+    criticalLevel: '10',
+    unitCost: '420.50',
+    supplier: 'Test Supplier',
+  });
   expect(material.status).toBe(201);
   const createRequest = (quantity: string) =>
-    request(app)
-      .post('/api/v1/inventory/requests')
-      .set(auth)
-      .send({
-        projectId: project.id,
-        materialId: material.body.data.id,
-        quantity,
-        requiredDate: '2026-10-10',
-        purpose: 'Foundation work',
-        status: 'SUBMITTED',
-      });
+    request(app).post('/api/v1/inventory/requests').set(auth).send({
+      projectId: project.id,
+      materialId: material.body.data.id,
+      quantity,
+      requiredDate: '2026-10-10',
+      purpose: 'Foundation work',
+      status: 'SUBMITTED',
+    });
   const first = await createRequest('80'),
     second = await createRequest('30');
   expect(first.status).toBe(201);
@@ -682,7 +729,9 @@ test('workforce enforces assignment, attendance uniqueness, shift overlap and pa
     location: 'Tower A',
     notes: '',
   };
-  expect((await request(app).post('/api/v1/workforce/shifts').set(auth).send(shift)).status).toBe(201);
+  expect((await request(app).post('/api/v1/workforce/shifts').set(auth).send(shift)).status).toBe(
+    201,
+  );
   expect(
     (
       await request(app)
@@ -693,7 +742,9 @@ test('workforce enforces assignment, attendance uniqueness, shift overlap and pa
   ).toBe(409);
   const dashboard = await request(app).get('/api/v1/workforce').set(auth);
   expect(dashboard.status).toBe(200);
-  expect(dashboard.body.data.payroll.find((row: { workerId: string }) => row.workerId === workerId)).toMatchObject({
+  expect(
+    dashboard.body.data.payroll.find((row: { workerId: string }) => row.workerId === workerId),
+  ).toMatchObject({
     approvedHours: '8',
     estimatedPay: '2000',
   });
@@ -706,32 +757,148 @@ test('workforce enforces assignment, attendance uniqueness, shift overlap and pa
 
 test('procurement approval, order math, idempotent partial receipts and invoices update stock', async () => {
   const admin = await db.user.findUniqueOrThrow({ where: { email: 'admin@integration.test' } });
-  const project = await db.project.create({ data: { organizationId: adminOrg, code: 'BT-PROC-TEST', name: 'Procurement Integration', category: 'Commercial', address: 'Procurement site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: { userId: admin.id } } } });
-  const material = await db.material.create({ data: { organizationId: adminOrg, sku: 'PROC-TEST-01', name: 'Procurement Cement', category: 'Cement', unit: 'bags', currentStock: '10', minimumLevel: '5', criticalLevel: '2', unitCost: '400' } });
+  const project = await db.project.create({
+    data: {
+      organizationId: adminOrg,
+      code: 'BT-PROC-TEST',
+      name: 'Procurement Integration',
+      category: 'Commercial',
+      address: 'Procurement site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: { userId: admin.id } },
+    },
+  });
+  const material = await db.material.create({
+    data: {
+      organizationId: adminOrg,
+      sku: 'PROC-TEST-01',
+      name: 'Procurement Cement',
+      category: 'Cement',
+      unit: 'bags',
+      currentStock: '10',
+      minimumLevel: '5',
+      criticalLevel: '2',
+      unitCost: '400',
+    },
+  });
   const auth = { Authorization: `Bearer ${adminToken}` };
-  const vendor = await request(app).post('/api/v1/procurement/vendors').set(auth).send({ code: 'VEN-TEST-01', name: 'Integration Supplier', contactName: 'Supplier Contact', email: 'supplier@example.test', phone: '', address: '', status: 'ACTIVE' });
+  const vendor = await request(app).post('/api/v1/procurement/vendors').set(auth).send({
+    code: 'VEN-TEST-01',
+    name: 'Integration Supplier',
+    contactName: 'Supplier Contact',
+    email: 'supplier@example.test',
+    phone: '',
+    address: '',
+    status: 'ACTIVE',
+  });
   expect(vendor.status).toBe(201);
-  const procurement = await request(app).post('/api/v1/procurement/requests').set(auth).send({ projectId: project.id, materialId: material.id, quantity: '20', requiredDate: '2026-10-15', justification: 'Foundation concrete', status: 'SUBMITTED' });
+  const procurement = await request(app).post('/api/v1/procurement/requests').set(auth).send({
+    projectId: project.id,
+    materialId: material.id,
+    quantity: '20',
+    requiredDate: '2026-10-15',
+    justification: 'Foundation concrete',
+    status: 'SUBMITTED',
+  });
   expect(procurement.status).toBe(201);
-  const approved = await request(app).patch(`/api/v1/procurement/requests/${procurement.body.data.id}/status`).set(auth).send({ status: 'APPROVED', decisionNote: 'Approved for site work.', version: procurement.body.data.version });
+  const approved = await request(app)
+    .patch(`/api/v1/procurement/requests/${procurement.body.data.id}/status`)
+    .set(auth)
+    .send({
+      status: 'APPROVED',
+      decisionNote: 'Approved for site work.',
+      version: procurement.body.data.version,
+    });
   expect(approved.status).toBe(200);
-  const order = await request(app).post('/api/v1/procurement/orders').set(auth).send({ requestId: procurement.body.data.id, vendorId: vendor.body.data.id, number: 'PO-TEST-001', unitPrice: '100', taxRate: '18', expectedDate: '2026-10-15', notes: '' });
+  const order = await request(app).post('/api/v1/procurement/orders').set(auth).send({
+    requestId: procurement.body.data.id,
+    vendorId: vendor.body.data.id,
+    number: 'PO-TEST-001',
+    unitPrice: '100',
+    taxRate: '18',
+    expectedDate: '2026-10-15',
+    notes: '',
+  });
   expect(order.status).toBe(201);
   expect(order.body.data).toMatchObject({ subtotal: '2000', taxAmount: '360', total: '2360' });
-  const firstReceipt = { receiptNumber: 'GRN-TEST-001', idempotencyKey: '11111111-1111-4111-8111-111111111111', quantity: '8', receivedAt: '2026-09-28T08:00:00.000Z', note: 'First truck' };
-  expect((await request(app).post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`).set(auth).send(firstReceipt)).status).toBe(201);
-  const replay = await request(app).post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`).set(auth).send(firstReceipt);
+  const firstReceipt = {
+    receiptNumber: 'GRN-TEST-001',
+    idempotencyKey: '11111111-1111-4111-8111-111111111111',
+    quantity: '8',
+    receivedAt: '2026-09-28T08:00:00.000Z',
+    note: 'First truck',
+  };
+  expect(
+    (
+      await request(app)
+        .post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`)
+        .set(auth)
+        .send(firstReceipt)
+    ).status,
+  ).toBe(201);
+  const replay = await request(app)
+    .post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`)
+    .set(auth)
+    .send(firstReceipt);
   expect(replay.status).toBe(200);
   expect(replay.body.message).toBe('Receipt already recorded.');
-  expect((await request(app).post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`).set(auth).send({ ...firstReceipt, receiptNumber: 'GRN-TEST-002', idempotencyKey: '22222222-2222-4222-8222-222222222222', quantity: '12' })).status).toBe(201);
+  expect(
+    (
+      await request(app)
+        .post(`/api/v1/procurement/orders/${order.body.data.id}/receipts`)
+        .set(auth)
+        .send({
+          ...firstReceipt,
+          receiptNumber: 'GRN-TEST-002',
+          idempotencyKey: '22222222-2222-4222-8222-222222222222',
+          quantity: '12',
+        })
+    ).status,
+  ).toBe(201);
   const storedMaterial = await db.material.findUniqueOrThrow({ where: { id: material.id } });
   expect(storedMaterial.currentStock.toString()).toBe('30');
-  expect(await db.stockMovement.count({ where: { materialId: material.id, procurementReceiptId: { not: null } } })).toBe(2);
-  expect((await db.purchaseOrder.findUniqueOrThrow({ where: { id: order.body.data.id } })).status).toBe('RECEIVED');
-  expect((await request(app).post('/api/v1/procurement/invoices').set(auth).send({ purchaseOrderId: order.body.data.id, invoiceNumber: 'INV-OVER', invoiceDate: '2026-09-28', dueDate: '2026-10-28', amount: '2400', notes: '' })).status).toBe(409);
-  const invoice = await request(app).post('/api/v1/procurement/invoices').set(auth).send({ purchaseOrderId: order.body.data.id, invoiceNumber: 'INV-TEST-001', invoiceDate: '2026-09-28', dueDate: '2026-10-28', amount: '2360', notes: '' });
+  expect(
+    await db.stockMovement.count({
+      where: { materialId: material.id, procurementReceiptId: { not: null } },
+    }),
+  ).toBe(2);
+  expect(
+    (await db.purchaseOrder.findUniqueOrThrow({ where: { id: order.body.data.id } })).status,
+  ).toBe('RECEIVED');
+  expect(
+    (
+      await request(app).post('/api/v1/procurement/invoices').set(auth).send({
+        purchaseOrderId: order.body.data.id,
+        invoiceNumber: 'INV-OVER',
+        invoiceDate: '2026-09-28',
+        dueDate: '2026-10-28',
+        amount: '2400',
+        notes: '',
+      })
+    ).status,
+  ).toBe(409);
+  const invoice = await request(app).post('/api/v1/procurement/invoices').set(auth).send({
+    purchaseOrderId: order.body.data.id,
+    invoiceNumber: 'INV-TEST-001',
+    invoiceDate: '2026-09-28',
+    dueDate: '2026-10-28',
+    amount: '2360',
+    notes: '',
+  });
   expect(invoice.status).toBe(201);
-  expect((await request(app).patch(`/api/v1/procurement/invoices/${invoice.body.data.id}/status`).set(auth).send({ status: 'VERIFIED', version: invoice.body.data.version })).status).toBe(200);
+  expect(
+    (
+      await request(app)
+        .patch(`/api/v1/procurement/invoices/${invoice.body.data.id}/status`)
+        .set(auth)
+        .send({ status: 'VERIFIED', version: invoice.body.data.version })
+    ).status,
+  ).toBe(200);
   await db.stockMovement.deleteMany({ where: { materialId: material.id } });
   await db.invoice.deleteMany({ where: { purchaseOrderId: order.body.data.id } });
   await db.goodsReceipt.deleteMany({ where: { purchaseOrderId: order.body.data.id } });
@@ -744,23 +911,124 @@ test('procurement approval, order math, idempotent partial receipts and invoices
 
 test('finance enforces category caps, currency and duplicate sources while reconciling commitments', async () => {
   const admin = await db.user.findUniqueOrThrow({ where: { email: 'admin@integration.test' } });
-  const project = await db.project.create({ data: { organizationId: adminOrg, code: 'BT-FIN-TEST', name: 'Finance Integration', category: 'Commercial', address: 'Finance site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000', estimatedCost: '900', members: { create: { userId: admin.id } } } });
-  const material = await db.material.create({ data: { organizationId: adminOrg, sku: 'FIN-TEST-01', name: 'Finance Material', category: 'Other', unit: 'units', currentStock: '0', minimumLevel: '0', criticalLevel: '0', unitCost: '10' } });
-  const vendor = await db.vendor.create({ data: { organizationId: adminOrg, code: 'FIN-VENDOR', name: 'Finance Vendor' } });
-  const procurement = await db.procurementRequest.create({ data: { projectId: project.id, materialId: material.id, requesterId: admin.id, approvedById: admin.id, quantity: '10', requiredDate: new Date('2026-10-15'), justification: 'Committed materials', status: 'ORDERED' } });
-  const order = await db.purchaseOrder.create({ data: { organizationId: adminOrg, number: 'PO-FIN-001', requestId: procurement.id, vendorId: vendor.id, materialId: material.id, quantity: '10', unitPrice: '30', taxRate: '0', subtotal: '300', taxAmount: '0', total: '300', expectedDate: new Date('2026-10-15'), createdById: admin.id } });
+  const project = await db.project.create({
+    data: {
+      organizationId: adminOrg,
+      code: 'BT-FIN-TEST',
+      name: 'Finance Integration',
+      category: 'Commercial',
+      address: 'Finance site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000',
+      estimatedCost: '900',
+      members: { create: { userId: admin.id } },
+    },
+  });
+  const material = await db.material.create({
+    data: {
+      organizationId: adminOrg,
+      sku: 'FIN-TEST-01',
+      name: 'Finance Material',
+      category: 'Other',
+      unit: 'units',
+      currentStock: '0',
+      minimumLevel: '0',
+      criticalLevel: '0',
+      unitCost: '10',
+    },
+  });
+  const vendor = await db.vendor.create({
+    data: { organizationId: adminOrg, code: 'FIN-VENDOR', name: 'Finance Vendor' },
+  });
+  const procurement = await db.procurementRequest.create({
+    data: {
+      projectId: project.id,
+      materialId: material.id,
+      requesterId: admin.id,
+      approvedById: admin.id,
+      quantity: '10',
+      requiredDate: new Date('2026-10-15'),
+      justification: 'Committed materials',
+      status: 'ORDERED',
+    },
+  });
+  const order = await db.purchaseOrder.create({
+    data: {
+      organizationId: adminOrg,
+      number: 'PO-FIN-001',
+      requestId: procurement.id,
+      vendorId: vendor.id,
+      materialId: material.id,
+      quantity: '10',
+      unitPrice: '30',
+      taxRate: '0',
+      subtotal: '300',
+      taxAmount: '0',
+      total: '300',
+      expectedDate: new Date('2026-10-15'),
+      createdById: admin.id,
+    },
+  });
   const auth = { Authorization: `Bearer ${adminToken}` };
-  expect((await request(app).post('/api/v1/finance/budgets').set(auth).send({ projectId: project.id, category: 'Materials', amount: '700', notes: '' })).status).toBe(201);
-  expect((await request(app).post('/api/v1/finance/budgets').set(auth).send({ projectId: project.id, category: 'Labour', amount: '400', notes: '' })).status).toBe(409);
-  const baseExpense = { projectId: project.id, vendorId: vendor.id, category: 'Site services', description: 'Temporary utilities', amount: '100', currency: 'INR', expenseDate: '2026-09-28', sourceRef: 'FIN-SOURCE-001', notes: '' };
-  expect((await request(app).post('/api/v1/finance/expenses').set(auth).send({ ...baseExpense, currency: 'USD' })).status).toBe(422);
+  expect(
+    (
+      await request(app)
+        .post('/api/v1/finance/budgets')
+        .set(auth)
+        .send({ projectId: project.id, category: 'Materials', amount: '700', notes: '' })
+    ).status,
+  ).toBe(201);
+  expect(
+    (
+      await request(app)
+        .post('/api/v1/finance/budgets')
+        .set(auth)
+        .send({ projectId: project.id, category: 'Labour', amount: '400', notes: '' })
+    ).status,
+  ).toBe(409);
+  const baseExpense = {
+    projectId: project.id,
+    vendorId: vendor.id,
+    category: 'Site services',
+    description: 'Temporary utilities',
+    amount: '100',
+    currency: 'INR',
+    expenseDate: '2026-09-28',
+    sourceRef: 'FIN-SOURCE-001',
+    notes: '',
+  };
+  expect(
+    (
+      await request(app)
+        .post('/api/v1/finance/expenses')
+        .set(auth)
+        .send({ ...baseExpense, currency: 'USD' })
+    ).status,
+  ).toBe(422);
   const expense = await request(app).post('/api/v1/finance/expenses').set(auth).send(baseExpense);
   expect(expense.status).toBe(201);
-  expect((await request(app).post('/api/v1/finance/expenses').set(auth).send(baseExpense)).status).toBe(409);
-  expect((await request(app).patch(`/api/v1/finance/expenses/${expense.body.data.id}/status`).set(auth).send({ status: 'APPROVED', version: expense.body.data.version })).status).toBe(200);
+  expect(
+    (await request(app).post('/api/v1/finance/expenses').set(auth).send(baseExpense)).status,
+  ).toBe(409);
+  expect(
+    (
+      await request(app)
+        .patch(`/api/v1/finance/expenses/${expense.body.data.id}/status`)
+        .set(auth)
+        .send({ status: 'APPROVED', version: expense.body.data.version })
+    ).status,
+  ).toBe(200);
   const dashboard = await request(app).get('/api/v1/finance').set(auth);
   const row = dashboard.body.data.projects.find((item: { id: string }) => item.id === project.id);
-  expect(row).toMatchObject({ actual: '100', commitment: '300', forecast: '400', remaining: '600' });
+  expect(row).toMatchObject({
+    actual: '100',
+    commitment: '300',
+    forecast: '400',
+    remaining: '600',
+  });
   await db.expense.deleteMany({ where: { projectId: project.id } });
   await db.budgetAllocation.deleteMany({ where: { projectId: project.id } });
   await db.purchaseOrder.delete({ where: { id: order.id } });
@@ -772,50 +1040,199 @@ test('finance enforces category caps, currency and duplicate sources while recon
 
 test('documents enforce signatures and project scope while notifications and real exports work', async () => {
   const admin = await db.user.findUniqueOrThrow({ where: { email: 'admin@integration.test' } });
-  const member = await db.user.create({ data: { organizationId: adminOrg, name: 'Document Recipient', email: 'document-recipient@integration.test', passwordHash: await bcrypt.hash(password, 12), role: 'PROJECT_MANAGER' } });
-  const project = await db.project.create({ data: { organizationId: adminOrg, code: 'BT-DOC-TEST', name: 'Document Integration', category: 'Commercial', address: 'Document site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: [{ userId: admin.id }, { userId: member.id }] } } });
+  const member = await db.user.create({
+    data: {
+      organizationId: adminOrg,
+      name: 'Document Recipient',
+      email: 'document-recipient@integration.test',
+      passwordHash: await bcrypt.hash(password, 12),
+      role: 'PROJECT_MANAGER',
+    },
+  });
+  const project = await db.project.create({
+    data: {
+      organizationId: adminOrg,
+      code: 'BT-DOC-TEST',
+      name: 'Document Integration',
+      category: 'Commercial',
+      address: 'Document site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: [{ userId: admin.id }, { userId: member.id }] },
+    },
+  });
   const auth = { Authorization: `Bearer ${adminToken}` };
-  const fake = await request(app).post('/api/v1/documents').set(auth).field('projectId', project.id).field('title', 'Unsafe file').field('category', 'Other').attach('file', Buffer.from('not a pdf'), { filename: 'unsafe.pdf', contentType: 'application/pdf' });
+  const fake = await request(app)
+    .post('/api/v1/documents')
+    .set(auth)
+    .field('projectId', project.id)
+    .field('title', 'Unsafe file')
+    .field('category', 'Other')
+    .attach('file', Buffer.from('not a pdf'), {
+      filename: 'unsafe.pdf',
+      contentType: 'application/pdf',
+    });
   expect(fake.status).toBe(422);
-  const upload = await request(app).post('/api/v1/documents').set(auth).field('projectId', project.id).field('title', 'Approved drawing').field('category', 'Drawing').attach('file', Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF'), { filename: 'drawing.pdf', contentType: 'application/pdf' });
+  const upload = await request(app)
+    .post('/api/v1/documents')
+    .set(auth)
+    .field('projectId', project.id)
+    .field('title', 'Approved drawing')
+    .field('category', 'Drawing')
+    .attach('file', Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF'), {
+      filename: 'drawing.pdf',
+      contentType: 'application/pdf',
+    });
   expect(upload.status).toBe(201);
   const version = upload.body.data.versions[0];
   expect(version.version).toBe(1);
-  expect(await db.notification.count({ where: { userId: member.id, type: 'DOCUMENT_UPLOADED' } })).toBe(1);
-  const download = await request(app).get(`/api/v1/documents/versions/${version.id}/download`).set(auth).buffer(true).parse((response, callback) => { const chunks: Buffer[] = []; response.on('data', (chunk) => chunks.push(chunk)); response.on('end', () => callback(null, Buffer.concat(chunks))); });
+  expect(
+    await db.notification.count({ where: { userId: member.id, type: 'DOCUMENT_UPLOADED' } }),
+  ).toBe(1);
+  const download = await request(app)
+    .get(`/api/v1/documents/versions/${version.id}/download`)
+    .set(auth)
+    .buffer(true)
+    .parse((response, callback) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => callback(null, Buffer.concat(chunks)));
+    });
   expect(download.status).toBe(200);
   expect((download.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
-  const pdf = await request(app).get(`/api/v1/reports/project-summary.pdf?projectId=${project.id}`).set(auth).buffer(true).parse((response, callback) => { const chunks: Buffer[] = []; response.on('data', (chunk) => chunks.push(chunk)); response.on('end', () => callback(null, Buffer.concat(chunks))); });
+  const preview = await request(app)
+    .get(`/api/v1/documents/versions/${version.id}/preview`)
+    .set(auth);
+  expect(preview.status).toBe(200);
+  expect(preview.headers['content-disposition']).toContain('inline');
+  const pdf = await request(app)
+    .get(`/api/v1/reports/project-summary.pdf?projectId=${project.id}`)
+    .set(auth)
+    .buffer(true)
+    .parse((response, callback) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => callback(null, Buffer.concat(chunks)));
+    });
   expect(pdf.status).toBe(200);
   expect(pdf.headers['content-type']).toContain('application/pdf');
   expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
-  const xlsx = await request(app).get(`/api/v1/reports/expenses.xlsx?projectId=${project.id}`).set(auth).buffer(true).parse((response, callback) => { const chunks: Buffer[] = []; response.on('data', (chunk) => chunks.push(chunk)); response.on('end', () => callback(null, Buffer.concat(chunks))); });
+  const xlsx = await request(app)
+    .get(`/api/v1/reports/expenses.xlsx?projectId=${project.id}`)
+    .set(auth)
+    .buffer(true)
+    .parse((response, callback) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => callback(null, Buffer.concat(chunks)));
+    });
   expect(xlsx.status).toBe(200);
   expect((xlsx.body as Buffer).subarray(0, 2).toString()).toBe('PK');
-  const stored = await db.documentVersion.findUniqueOrThrow({ where: { id: version.id } });
   await db.notification.deleteMany({ where: { userId: member.id } });
-  await db.documentVersion.delete({ where: { id: version.id } });
-  await db.document.delete({ where: { id: upload.body.data.id } });
-  await unlink(stored.storagePath).catch(() => undefined);
+  const deleted = await request(app).delete(`/api/v1/documents/${upload.body.data.id}`).set(auth);
+  expect(deleted.status).toBe(200);
+  expect(await db.document.findUnique({ where: { id: upload.body.data.id } })).toBeNull();
   await db.project.delete({ where: { id: project.id } });
   await db.user.delete({ where: { id: member.id } });
 });
 
 test('analytics reconciles project controls and keeps demo integrations explicitly non-live', async () => {
   const admin = await db.user.findUniqueOrThrow({ where: { email: 'admin@integration.test' } });
-  const project = await db.project.create({ data: { organizationId: adminOrg, code: 'BT-ANALYTICS-TEST', name: 'Analytics Integration', category: 'Commercial', address: 'Analytics site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000', estimatedCost: '900', members: { create: { userId: admin.id } } } });
-  const item = await db.workItem.create({ data: { projectId: project.id, kind: 'MILESTONE', name: 'Overdue milestone', startDate: new Date('2026-09-01'), plannedDate: new Date('2026-09-10'), status: 'IN_PROGRESS', progress: 20 } });
-  await db.siteDelay.create({ data: { projectId: project.id, reporterId: admin.id, workItemId: item.id, date: new Date('2026-09-20'), cause: 'Material delay', daysDelayed: 3, impact: 'Schedule risk', critical: true } });
-  await db.inspection.create({ data: { projectId: project.id, inspectorId: admin.id, date: new Date('2026-09-20'), location: 'Tower A', type: 'Quality', result: 'FAILED', findings: 'Correction required' } });
-  await db.expense.create({ data: { organizationId: adminOrg, projectId: project.id, category: 'Site', description: 'Approved test expense', amount: '100', currency: 'INR', expenseDate: new Date('2026-09-20'), sourceRef: 'ANALYTICS-EXP-1', status: 'APPROVED', createdById: admin.id, approvedById: admin.id } });
+  const project = await db.project.create({
+    data: {
+      organizationId: adminOrg,
+      code: 'BT-ANALYTICS-TEST',
+      name: 'Analytics Integration',
+      category: 'Commercial',
+      address: 'Analytics site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000',
+      estimatedCost: '900',
+      members: { create: { userId: admin.id } },
+    },
+  });
+  const item = await db.workItem.create({
+    data: {
+      projectId: project.id,
+      kind: 'MILESTONE',
+      name: 'Overdue milestone',
+      startDate: new Date('2026-09-01'),
+      plannedDate: new Date('2026-09-10'),
+      status: 'IN_PROGRESS',
+      progress: 20,
+    },
+  });
+  await db.siteDelay.create({
+    data: {
+      projectId: project.id,
+      reporterId: admin.id,
+      workItemId: item.id,
+      date: new Date('2026-09-20'),
+      cause: 'Material delay',
+      daysDelayed: 3,
+      impact: 'Schedule risk',
+      critical: true,
+    },
+  });
+  await db.inspection.create({
+    data: {
+      projectId: project.id,
+      inspectorId: admin.id,
+      date: new Date('2026-09-20'),
+      location: 'Tower A',
+      type: 'Quality',
+      result: 'FAILED',
+      findings: 'Correction required',
+    },
+  });
+  await db.expense.create({
+    data: {
+      organizationId: adminOrg,
+      projectId: project.id,
+      category: 'Site',
+      description: 'Approved test expense',
+      amount: '100',
+      currency: 'INR',
+      expenseDate: new Date('2026-09-20'),
+      sourceRef: 'ANALYTICS-EXP-1',
+      status: 'APPROVED',
+      createdById: admin.id,
+      approvedById: admin.id,
+    },
+  });
   const auth = { Authorization: `Bearer ${adminToken}` };
   const dashboard = await request(app).get('/api/v1/analytics').set(auth);
   expect(dashboard.status).toBe(200);
-  const row = dashboard.body.data.projects.find((record: { id: string }) => record.id === project.id);
-  expect(row).toMatchObject({ progress: 20, overdue: 1, criticalDelays: 1, unresolvedInspections: 1, actual: '100', riskScore: 57, insight: 'Immediate review recommended' });
-  const weather = await request(app).get(`/api/v1/analytics/projects/${project.id}/weather`).set(auth);
-  expect(weather.body.data).toMatchObject({ live: false, provider: 'DEMO', label: 'Demonstration weather — not live' });
-  const cameras = await request(app).get(`/api/v1/analytics/projects/${project.id}/camera-feeds`).set(auth);
+  const row = dashboard.body.data.projects.find(
+    (record: { id: string }) => record.id === project.id,
+  );
+  expect(row).toMatchObject({
+    progress: 20,
+    overdue: 1,
+    criticalDelays: 1,
+    unresolvedInspections: 1,
+    actual: '100',
+    riskScore: 57,
+    insight: 'Immediate review recommended',
+  });
+  const weather = await request(app)
+    .get(`/api/v1/analytics/projects/${project.id}/weather`)
+    .set(auth);
+  expect(weather.body.data).toMatchObject({
+    live: false,
+    provider: 'DEMO',
+    label: 'Demonstration weather — not live',
+  });
+  const cameras = await request(app)
+    .get(`/api/v1/analytics/projects/${project.id}/camera-feeds`)
+    .set(auth);
   expect(cameras.body.data).toMatchObject({ live: false, provider: 'UNCONFIGURED', feeds: [] });
   const ml = await request(app).get('/api/v1/ml').set(auth);
   expect(ml.status).toBe(200);
@@ -835,9 +1252,13 @@ test('analytics reconciles project controls and keeps demo integrations explicit
     model: 'Organization-scoped logistic failure classifier',
     version: 'equipment-maintenance-v1',
   });
-  const isolated = await request(app).get('/api/v1/analytics').set('Authorization', `Bearer ${clientToken}`);
+  const isolated = await request(app)
+    .get('/api/v1/analytics')
+    .set('Authorization', `Bearer ${clientToken}`);
   expect(isolated.body.data.projects).toHaveLength(0);
-  const isolatedMl = await request(app).get('/api/v1/ml').set('Authorization', `Bearer ${clientToken}`);
+  const isolatedMl = await request(app)
+    .get('/api/v1/ml')
+    .set('Authorization', `Bearer ${clientToken}`);
   expect(isolatedMl.body.data.scheduleDelay.trainingSamples).toBe(0);
   expect(isolatedMl.body.data.costAtCompletion.trainingSamples).toBe(0);
   expect(isolatedMl.body.data.materialDemand).toBeNull();
@@ -918,6 +1339,10 @@ test('enforces admin permission and scopes directory to organization', async () 
   expect(users.status).toBe(200);
   expect(users.body.data).toHaveLength(1);
   expect(users.body.data[0].email).toBe('admin@integration.test');
+  const page = await request(app)
+    .get('/api/v1/users?page=1&limit=1&sort=name&direction=asc')
+    .set('Authorization', `Bearer ${adminToken}`);
+  expect(page.body.meta).toMatchObject({ page: 1, limit: 1, total: 1, totalPages: 1 });
 });
 test('profile updates persist without exposing password hashes', async () => {
   const response = await request(app)
@@ -943,7 +1368,7 @@ test('overview contains database session counts and only own activity', async ()
   const expected = await db.auditLog.count({ where: { actorId: clientId } });
   expect(response.body.data.activity).toHaveLength(Math.min(expected, 8));
 });
-test('rotates refresh tokens, prevents reuse, checks origin and revokes access on logout', async () => {
+test('rotates refresh tokens, revokes the token family on reuse, checks origin and logs out', async () => {
   const login = await request(app)
     .post('/api/v1/auth/login')
     .send({ email: 'client@integration.test', password });
@@ -962,16 +1387,34 @@ test('rotates refresh tokens, prevents reuse, checks origin and revokes access o
   expect(
     (
       await request(app)
-        .post('/api/v1/auth/logout')
+        .post('/api/v1/auth/refresh')
         .set(browser)
         .set('Cookie', rotated.headers['set-cookie'] as unknown as string[])
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${rotated.body.data.accessToken}`)
+    ).status,
+  ).toBe(401);
+  const nextLogin = await request(app)
+    .post('/api/v1/auth/login')
+    .send({ email: 'client@integration.test', password });
+  expect(
+    (
+      await request(app)
+        .post('/api/v1/auth/logout')
+        .set(browser)
+        .set('Cookie', nextLogin.headers['set-cookie'] as unknown as string[])
     ).status,
   ).toBe(200);
   expect(
     (
       await request(app)
         .get('/api/v1/auth/me')
-        .set('Authorization', `Bearer ${rotated.body.data.accessToken}`)
+        .set('Authorization', `Bearer ${nextLogin.body.data.accessToken}`)
     ).status,
   ).toBe(401);
 });

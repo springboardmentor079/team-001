@@ -20,6 +20,9 @@ interface Item {
   actualDate: string | null;
   status: string;
   progress: number;
+  weight: string;
+  baselineStartDate: string | null;
+  baselinePlannedDate: string | null;
   responsibleId: string | null;
   dependencyId: string | null;
   version: number;
@@ -65,6 +68,8 @@ export class ScheduleComponent {
     actualDate: [''],
     status: ['NOT_STARTED'],
     progress: [0, [Validators.min(0), Validators.max(100)]],
+    weight: ['1', [Validators.required, Validators.min(0.01)]],
+    rebaseline: [false],
     responsibleId: [''],
     dependencyId: [''],
   });
@@ -100,6 +105,8 @@ export class ScheduleComponent {
       actualDate: item?.actualDate?.slice(0, 10) || '',
       status: item?.status || 'NOT_STARTED',
       progress: item?.progress || 0,
+      weight: item?.weight || '1',
+      rebaseline: false,
       responsibleId: item?.responsibleId || '',
       dependencyId: item?.dependencyId || '',
     });
