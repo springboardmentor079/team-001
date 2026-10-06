@@ -1,0 +1,16 @@
+<button class="assistant-trigger" [class.active]="open()" (click)="toggle()" [attr.aria-expanded]="open()" aria-controls="buildtrack-assistant" aria-label="Open BuildTrack assistant">
+  <span class="spark">✦</span><span class="trigger-label">Ask BuildTrack</span>
+</button>
+@if (open()) {
+  <section class="assistant-panel" id="buildtrack-assistant" aria-label="BuildTrack assistant">
+    <header><div class="assistant-mark">✦</div><div><strong>BuildTrack Assistant</strong><small><i></i> Context-aware guidance</small></div><button (click)="open.set(false)" aria-label="Close assistant"><bt-icon name="close" /></button></header>
+    <div class="privacy-note">{{ auth.user() ? 'Uses your authorized workspace summary. Chat is not stored.' : 'Public product help. Sign in for workspace context.' }}</div>
+    <div class="chat-log" aria-live="polite">
+      @for (message of messages(); track $index) {<div class="message" [class.user]="message.from === 'user'"><span>{{ message.text }}</span></div>}
+      @if (busy()) {<div class="message"><span class="typing"><i></i><i></i><i></i></span></div>}
+    </div>
+    <div class="quick-prompts">@for (suggestion of suggestions; track suggestion) {<button (click)="ask(suggestion)" [disabled]="busy()">{{ suggestion }}</button>}</div>
+    <form (ngSubmit)="ask()"><label for="assistant-message" class="sr-only">Message the BuildTrack assistant</label><input id="assistant-message" name="assistant-message" [(ngModel)]="draft" maxlength="500" autocomplete="off" placeholder="Ask about this page…" /><button type="submit" [disabled]="busy() || !draft.trim()" aria-label="Send message"><bt-icon name="arrow" /></button></form>
+    <footer>Secure context engine · Verify critical project decisions</footer>
+  </section>
+}

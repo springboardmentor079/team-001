@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/.angular
+**/.env
+.env
+.local
+**/.local
+tmp
+test-results
+playwright-report
+*.pdf

@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: buildtrack
+      POSTGRES_DB: buildtrack
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+    volumes:
+      - buildtrack-db:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U buildtrack -d buildtrack']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 4300
+      DATABASE_URL: postgresql://buildtrack:${POSTGRES_PASSWORD}@postgres:5432/buildtrack
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in root .env}
+      APP_ORIGIN: http://localhost:4200
+      MAIL_PROVIDER: local
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?Set DEMO_PASSWORD in root .env}
+    command: [sh, -c, '../node_modules/.bin/prisma migrate deploy && node dist/src/server.js']
+    volumes:
+      - buildtrack-data:/app/backend/.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:4300/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - '127.0.0.1:4200:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  buildtrack-db:
+  buildtrack-data:

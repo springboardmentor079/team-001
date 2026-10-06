@@ -1,0 +1,210 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">SITE MONITORING</span>
+    <h1>{{ project()?.name || 'Site operations' }}<span class="orange">.</span></h1>
+    <p>Daily progress, delays, inspections and activity.</p>
+  </div>
+  <div class="member-actions">
+    @if (can('SITE_REPORT_CREATE')) {
+      <button class="btn primary" (click)="mode.set('report')">Daily report</button
+      ><button class="btn" (click)="mode.set('delay')">Report delay</button>
+    }
+    @if (can('SITE_ISSUE_MANAGE')) {
+      <button class="btn" (click)="mode.set('inspection')">Inspection</button>
+    }
+  </div>
+</div>
+<a class="text-button" [routerLink]="['/projects', projectId]">← Project overview</a>
+@if (error()) {
+  <div class="notice error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (mode() === 'report') {
+  <section class="panel project-form">
+    <h2>Daily site report</h2>
+    <form [formGroup]="reportForm" (ngSubmit)="save('report')">
+      <div class="project-fields">
+        <div class="field">
+          <label for="report-date">Date</label
+          ><input id="report-date" type="date" formControlName="reportDate" />
+        </div>
+        <div class="field">
+          <label for="report-weather">Weather</label
+          ><input id="report-weather" formControlName="weather" />
+        </div>
+        <div class="field">
+          <label for="report-workers">Workers present</label
+          ><input id="report-workers" type="number" min="0" formControlName="workersPresent" />
+        </div>
+        <div class="field">
+          <label for="report-progress">Reported progress %</label
+          ><input
+            id="report-progress"
+            type="number"
+            min="0"
+            max="100"
+            formControlName="reportedProgress"
+          />
+        </div>
+      </div>
+      @for (
+        f of [
+          ['workCompleted', 'Work completed'],
+          ['materialsUsed', 'Materials used'],
+          ['equipmentUsed', 'Equipment used'],
+          ['safetyObservations', 'Safety observations'],
+          ['issues', 'Issues'],
+          ['notes', 'Notes'],
+        ];
+        track f[0]
+      ) {
+        <div class="field">
+          <label [for]="'report-' + f[0]">{{ f[1] }}</label
+          ><textarea [id]="'report-' + f[0]" [formControlName]="f[0]" rows="2"></textarea>
+        </div>
+      }
+      <div class="member-actions">
+        <button class="btn primary">Save report</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'delay') {
+  <section class="panel project-form">
+    <h2>Report a delay</h2>
+    <form [formGroup]="delayForm" (ngSubmit)="save('delay')">
+      <div class="project-fields">
+        <div class="field">
+          <label for="delay-date">Date</label
+          ><input id="delay-date" type="date" formControlName="date" />
+        </div>
+        <div class="field">
+          <label for="delay-days">Days delayed</label
+          ><input id="delay-days" type="number" min="1" formControlName="daysDelayed" />
+        </div>
+        <div class="field">
+          <label for="delay-cause">Cause</label><input id="delay-cause" formControlName="cause" />
+        </div>
+        <div class="field">
+          <label><input type="checkbox" formControlName="critical" /> Critical blocker</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="delay-impact">Impact</label
+        ><textarea id="delay-impact" formControlName="impact"></textarea>
+      </div>
+      <div class="field">
+        <label for="delay-action">Corrective action</label
+        ><textarea id="delay-action" formControlName="correctiveAction"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Report delay</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'inspection') {
+  <section class="panel project-form">
+    <h2>Record inspection</h2>
+    <form [formGroup]="inspectionForm" (ngSubmit)="save('inspection')">
+      <div class="project-fields">
+        <div class="field">
+          <label for="inspection-date">Date</label
+          ><input id="inspection-date" type="date" formControlName="date" />
+        </div>
+        <div class="field">
+          <label for="inspection-location">Location</label
+          ><input id="inspection-location" formControlName="location" />
+        </div>
+        <div class="field">
+          <label for="inspection-type">Inspection type</label
+          ><input id="inspection-type" formControlName="type" />
+        </div>
+        <div class="field">
+          <label for="inspection-result">Result</label
+          ><select id="inspection-result" formControlName="result">
+            <option value="PASSED">Passed</option>
+            <option value="CONDITIONAL">Conditional</option>
+            <option value="FAILED">Failed</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="inspection-findings">Findings</label
+        ><textarea id="inspection-findings" formControlName="findings"></textarea>
+      </div>
+      <div class="field">
+        <label for="inspection-action">Corrective action</label
+        ><textarea id="inspection-action" formControlName="correctiveAction"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Record inspection</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+<div class="site-grid">
+  <section class="panel project-info">
+    <h2>Daily reports</h2>
+    @for (r of data()?.reports || []; track r.id) {
+      <article class="site-record">
+        <div class="project-card-top">
+          <span>{{ r.reportDate | date: 'mediumDate' : 'UTC' }} · {{ r.author?.name }}</span
+          ><span class="tag green-tag">{{ r.reportedProgress }}%</span>
+        </div>
+        <h3>{{ r.workCompleted }}</h3>
+        <p>{{ r.workersPresent }} workers · {{ r.weather }}</p>
+        @if (r.safetyObservations) {
+          <small>Safety: {{ r.safetyObservations }}</small>
+        }
+      </article>
+    } @empty {
+      <div class="empty-state">No daily reports yet.</div>
+    }
+  </section>
+  <div>
+    <section class="panel project-info">
+      <h2>Delays</h2>
+      @for (d of data()?.delays || []; track d.id) {
+        <article class="site-record">
+          <div class="project-card-top">
+            <span>{{ d.date | date: 'mediumDate' : 'UTC' }}</span
+            ><span class="tag">{{ label(d.status) }}</span>
+          </div>
+          <h3>{{ d.cause }}</h3>
+          <p>{{ d.daysDelayed }} days · {{ d.impact }}</p>
+          @if (can('SITE_ISSUE_MANAGE') && d.status !== 'RESOLVED') {
+            <button class="text-button" (click)="updateDelay(d, 'RESOLVED')">Mark resolved</button>
+          }
+        </article>
+      } @empty {
+        <div class="empty-state">No delays reported.</div>
+      }
+    </section>
+    <section class="panel project-info">
+      <h2>Inspections</h2>
+      @for (i of data()?.inspections || []; track i.id) {
+        <article class="site-record">
+          <div class="project-card-top">
+            <span>{{ i.date | date: 'mediumDate' : 'UTC' }} · {{ i.type }}</span
+            ><span class="tag" [class.green-tag]="i.result === 'PASSED'">{{
+              label(i.result)
+            }}</span>
+          </div>
+          <h3>{{ i.location }}</h3>
+          <p>{{ i.findings }}</p>
+          @if (can('SITE_ISSUE_MANAGE') && !i.resolved) {
+            <button class="text-button" (click)="resolveInspection(i)">Resolve finding</button>
+          }
+        </article>
+      } @empty {
+        <div class="empty-state">No inspections recorded.</div>
+      }
+    </section>
+  </div>
+</div>

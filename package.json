@@ -1,0 +1,37 @@
+{
+  "name": "buildtrack",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=22.12 <25"
+  },
+  "overrides": {
+    "uuid": "11.1.1",
+    "deepmerge-ts": "8.0.2"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w backend\" \"npm start -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "lint": "eslint backend/src backend/tests backend/prisma frontend/src/app e2e && tsc --noEmit -p backend/tsconfig.json",
+    "format": "prettier --write backend/src backend/prisma frontend/src docs scripts e2e *.json *.md",
+    "test": "npm test -w backend",
+    "test:e2e": "playwright test",
+    "db:generate": "npm run db:generate -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:seed": "npm run db:seed -w backend",
+    "test:frontend": "npm test -w frontend",
+    "db:test:migrate": "node scripts/prepare-test-db.cjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "typescript-eslint": "^8.48.0",
+    "eslint": "^9.39.0",
+    "prettier": "^3.7.0",
+    "concurrently": "^9.2.1",
+    "@playwright/test": "^1.58.0"
+  }
+}

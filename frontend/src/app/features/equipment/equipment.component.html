@@ -1,0 +1,238 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">RESOURCE CONTROL</span>
+    <h1>Resource & equipment<span class="orange">.</span></h1>
+    <p>Monitor allocation, utilization and maintenance.</p>
+  </div>
+  @if (can('RESOURCE_MAINTAIN')) {
+    <button class="btn primary" (click)="open('equipment')">Add equipment</button>
+  }
+</div>
+@if (error()) {
+  <div class="notice error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (data(); as d) {
+  <div class="project-stat-strip equipment-stats">
+    <div>
+      <strong>{{ d.summary.total }}</strong
+      ><span>Total units</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.available }}</strong
+      ><span>Available</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.inUse }}</strong
+      ><span>In use</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.maintenance }}</strong
+      ><span>Maintenance</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.utilization }}%</strong><span>Utilization</span>
+    </div>
+  </div>
+}
+@if (mode() === 'equipment') {
+  <section class="panel project-form">
+    <h2>{{ selected() ? 'Edit equipment' : 'Add equipment' }}</h2>
+    <form [formGroup]="equipmentForm" (ngSubmit)="saveEquipment()">
+      <div class="project-fields">
+        @for (
+          f of [
+            ['code', 'Equipment code'],
+            ['name', 'Equipment name'],
+            ['type', 'Type'],
+            ['location', 'Location'],
+            ['hourlyRate', 'Hourly rate'],
+          ];
+          track f[0]
+        ) {
+          <div class="field">
+            <label [for]="'equipment-' + f[0]">{{ f[1] }}</label
+            ><input [id]="'equipment-' + f[0]" [formControlName]="f[0]" />
+          </div>
+        }
+        <div class="field">
+          <label for="equipment-status">Status</label
+          ><select id="equipment-status" formControlName="status">
+            <option value="AVAILABLE">Available</option>
+            <option value="RESERVED">Reserved</option>
+            <option value="UNAVAILABLE">Unavailable</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="equipment-commissioned">Commissioned date</label
+          ><input id="equipment-commissioned" type="date" formControlName="commissionedAt" />
+        </div>
+        <div class="field">
+          <label for="equipment-service-interval">Service interval (days)</label
+          ><input id="equipment-service-interval" type="number" min="1" max="3650" formControlName="serviceIntervalDays" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="equipment-notes">Notes</label
+        ><textarea id="equipment-notes" formControlName="notes"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Save equipment</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'allocate') {
+  <section class="panel project-form">
+    <h2>Allocate {{ selected()?.name }}</h2>
+    <form [formGroup]="allocationForm" (ngSubmit)="allocate()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="allocation-project">Project</label
+          ><select id="allocation-project" formControlName="projectId">
+            <option value="">Select project</option>
+            @for (p of projects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="allocation-start">Start</label
+          ><input id="allocation-start" type="datetime-local" formControlName="startAt" />
+        </div>
+        <div class="field">
+          <label for="allocation-end">End</label
+          ><input id="allocation-end" type="datetime-local" formControlName="endAt" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="allocation-notes">Notes</label
+        ><textarea id="allocation-notes" formControlName="notes"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Allocate equipment</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'maintenance') {
+  <section class="panel project-form">
+    <h2>Schedule maintenance</h2>
+    <form [formGroup]="maintenanceForm" (ngSubmit)="scheduleMaintenance()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="maintenance-type">Maintenance type</label
+          ><input id="maintenance-type" formControlName="type" />
+        </div>
+        <div class="field">
+          <label for="maintenance-date">Scheduled date</label
+          ><input id="maintenance-date" type="datetime-local" formControlName="scheduledAt" />
+        </div>
+        <div class="field">
+          <label for="maintenance-priority">Priority</label
+          ><select id="maintenance-priority" formControlName="priority">
+            <option>LOW</option>
+            <option>MEDIUM</option>
+            <option>HIGH</option>
+            <option>CRITICAL</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="maintenance-downtime">Downtime hours</label
+          ><input id="maintenance-downtime" type="number" min="0" step="0.25" formControlName="downtimeHours" />
+        </div>
+        <div class="field checkbox-field">
+          <label for="maintenance-failure"><input id="maintenance-failure" type="checkbox" formControlName="failureRelated" /> Failure-related maintenance</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="maintenance-notes">Notes</label
+        ><textarea id="maintenance-notes" formControlName="notes"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Schedule maintenance</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+<section class="panel">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Equipment</th>
+          <th>Type</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Rate</th>
+          <th>Current allocation / maintenance</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of data()?.records || []; track item.id) {
+          <tr>
+            <td>
+              <strong>{{ item.name }}</strong
+              ><small>{{ item.code }}</small>
+            </td>
+            <td>{{ item.type }}</td>
+            <td>{{ item.location }}</td>
+            <td>
+              <span class="tag" [class.green-tag]="item.status === 'AVAILABLE'">{{
+                label(item.status)
+              }}</span>
+            </td>
+            <td>{{ item.hourlyRate | currency: auth.user()?.organization?.currency }}</td>
+            <td>
+              @for (a of item.allocations; track a.id) {
+                <div>
+                  {{ a.project.name }} · {{ a.endAt | date: 'medium' }}
+                  @if (!a.releasedAt && can('RESOURCE_ALLOCATE')) {
+                    <button class="text-button" (click)="release(item, a)">Release</button>
+                  }
+                </div>
+              }
+              @for (m of item.maintenance; track m.id) {
+                <div>
+                  {{ m.type }} · {{ m.scheduledAt | date: 'medium' }} · {{ label(m.status) }}
+                  @if (can('RESOURCE_MAINTAIN') && m.status === 'SCHEDULED') {
+                    <button class="text-button" (click)="maintenanceStatus(item, m, 'IN_PROGRESS')">
+                      Start
+                    </button>
+                  }
+                  @if (can('RESOURCE_MAINTAIN') && m.status === 'IN_PROGRESS') {
+                    <button class="text-button" (click)="maintenanceStatus(item, m, 'COMPLETED')">
+                      Complete
+                    </button>
+                  }
+                </div>
+              }
+              @if (!item.allocations.length && !item.maintenance.length) {
+                —
+              }
+            </td>
+            <td>
+              @if (can('RESOURCE_ALLOCATE')) {
+                <button class="text-button" (click)="open('allocate', item)">Allocate</button>
+              }
+              @if (can('RESOURCE_MAINTAIN')) {
+                <button class="text-button" (click)="open('maintenance', item)">Maintain</button
+                ><button class="text-button" (click)="open('equipment', item)">Edit</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7">No equipment has been added.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,45 @@
+<div class="landing">
+  <header class="landing-nav">
+    <a class="brand light" routerLink="/" aria-label="BuildTrack home">
+      <img src="/images/mark.svg" alt="" /><span>BuildTrack<span class="brand-dot">.</span></span>
+    </a>
+    <nav aria-label="Landing navigation">
+      <a href="#platform">Platform</a><a href="#workflow">Workflow</a><a href="#outcomes">Outcomes</a>
+    </nav>
+    <div class="nav-actions"><a class="text-link" routerLink="/login">Sign in</a><a class="landing-btn compact" routerLink="/register">Start building <bt-icon name="arrow" /></a></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <span class="hero-kicker"><span></span> Construction intelligence, connected</span>
+        <h1>From groundbreak to handover, <em>stay in control.</em></h1>
+        <p>BuildTrack brings schedules, people, materials, costs and site intelligence into one secure workspace built for real construction teams.</p>
+        <div class="hero-actions"><a class="landing-btn" routerLink="/register">Create your workspace <bt-icon name="arrow" /></a><a class="demo-link" routerLink="/login"><span>▶</span> Explore the demo</a></div>
+        <div class="trust-row"><span><bt-icon name="check" /> Role-based access</span><span><bt-icon name="check" /> Live project records</span><span><bt-icon name="check" /> Audit-ready workflows</span></div>
+      </div>
+      <div class="hero-visual" aria-label="BuildTrack project workspace preview">
+        <div class="visual-glow"></div>
+        <div class="site-image"><div class="image-label"><span>LIVE SITE OVERVIEW</span><strong>Riverside Commercial Hub</strong><small>68% complete · 142 workers on site</small></div></div>
+        <div class="floating-card progress-card"><span>PROJECT HEALTH</span><strong>On track</strong><div class="mini-track"><i></i></div><small>8 milestones completed</small></div>
+        <div class="floating-card alert-card"><span class="alert-icon">!</span><div><strong>Risk identified early</strong><small>Schedule insight updated</small></div></div>
+      </div>
+    </section>
+
+    <section class="proof"><span>ONE RELIABLE VIEW FOR</span><strong>Project owners</strong><i></i><strong>Site teams</strong><i></i><strong>Contractors</strong><i></i><strong>Finance leaders</strong></section>
+
+    <section class="platform" id="platform">
+      <div class="section-intro"><span class="section-kicker">THE CONNECTED PLATFORM</span><h2>Everything your project needs.<br /><em>Nothing gets lost.</em></h2><p>Replace disconnected spreadsheets and status calls with structured workflows that move with the project.</p></div>
+      <div class="feature-grid">@for (feature of features; track feature.title) {<article><span class="feature-number">0{{ $index + 1 }}</span><div class="feature-icon"><bt-icon [name]="feature.icon" /></div><h3>{{ feature.title }}</h3><p>{{ feature.text }}</p><span class="feature-line"></span></article>}</div>
+    </section>
+
+    <section class="workflow" id="workflow">
+      <div><span class="section-kicker light-kicker">ONE WORKFLOW</span><h2>Decisions move faster when the facts are connected.</h2><p>Every approved request, site update and financial event contributes to the same project picture.</p><a class="landing-btn light-btn" routerLink="/login">Enter the workspace <bt-icon name="arrow" /></a></div>
+      <ol><li><span>01</span><div><strong>Capture</strong><small>Site reports, attendance, stock and documents</small></div></li><li><span>02</span><div><strong>Coordinate</strong><small>Assignments, approvals and procurement</small></div></li><li><span>03</span><div><strong>Understand</strong><small>Progress, commitments and transparent risk</small></div></li><li><span>04</span><div><strong>Deliver</strong><small>Controlled closure with complete records</small></div></li></ol>
+    </section>
+
+    <section class="outcomes" id="outcomes"><div><span class="section-kicker">BUILT FOR ACCOUNTABILITY</span><h2>Know what changed.<br />Know what comes next.</h2></div><div class="outcome-stat"><strong>12</strong><span>connected operational modules</span></div><div class="outcome-stat"><strong>6</strong><span>purpose-built team roles</span></div><div class="outcome-stat accent"><strong>1</strong><span>source of project truth</span></div></section>
+  </main>
+
+  <footer class="landing-footer"><a class="brand light" routerLink="/"><img src="/images/mark.svg" alt="" /><span>BuildTrack<span class="brand-dot">.</span></span></a><p>One workspace. Built for progress.</p><div><a routerLink="/login">Sign in</a><a routerLink="/register">Create account</a></div></footer>
+</div>

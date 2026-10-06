@@ -1,0 +1,122 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">YOUR WORKSPACE, CONNECTED</span>
+    <h1>Welcome, {{ firstName }}<span class="orange">.</span></h1>
+    <p>Your account, team access, and recent activity in one place.</p>
+  </div>
+  <a class="btn secondary" routerLink="/profile"><bt-icon name="user" />Manage profile</a>
+</div>
+<section class="workspace-hero">
+  <img src="/images/construction.jpg" alt="Cranes overlooking an active construction site" />
+  <div class="hero-shade"></div>
+  <div class="hero-copy">
+    <span class="hero-pill">BUILDTRACK WORKSPACE</span>
+    <h2>Good work starts<br />with a connected team.</h2>
+    <p>
+      {{ auth.user()?.organization?.name }} <span> / </span> {{ label(auth.user()?.role || '') }}
+    </p>
+  </div>
+  <div class="hero-corner">
+    <bt-icon name="building" /><span>FROM FOUNDATION<br /><strong>TO FINISH.</strong></span>
+  </div>
+</section>
+@if (error()) {
+  <div class="notice error" role="alert">
+    {{ error() }}<button class="text-button" (click)="load()">Try again</button>
+  </div>
+}
+@if (loading()) {
+  <div class="metrics-grid" aria-label="Loading account summary" aria-busy="true">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="metric skeleton"></div>
+    }
+  </div>
+}
+@if (data(); as summary) {
+  <div class="metrics-grid">
+    <article class="metric">
+      <div class="metric-head">
+        <span>YOUR ACCESS LEVEL</span
+        ><span class="icon-tile orange-tile"><bt-icon name="shield" /></span>
+      </div>
+      <strong>{{ label(summary.role) }}</strong
+      ><small>Permissions managed by your organization</small>
+    </article>
+    <article class="metric">
+      <div class="metric-head">
+        <span>ACTIVE SESSIONS</span
+        ><span class="icon-tile blue-tile"><bt-icon name="activity" /></span>
+      </div>
+      <strong
+        >{{ summary.sessions }}
+        <span class="metric-unit">{{
+          summary.sessions === 1 ? 'session' : 'sessions'
+        }}</span></strong
+      ><small>Authenticated sessions across your devices</small>
+    </article>
+    <article class="metric">
+      <div class="metric-head">
+        <span>MEMBER SINCE</span><span class="icon-tile green-tile"><bt-icon name="clock" /></span>
+      </div>
+      <strong>{{ summary.memberSince | date: 'dd MMM yyyy' }}</strong
+      ><small>A part of {{ summary.organization.name }}</small>
+    </article>
+  </div>
+  <div class="overview-grid">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Recent account activity</h2>
+          <p>A record of your latest account actions.</p>
+        </div>
+        <span class="tag neutral">Latest {{ summary.activity.length }}</span>
+      </div>
+      <div class="activity-list">
+        @for (item of summary.activity; track item.id) {
+          <div class="activity-row">
+            <span class="activity-mark"
+              ><bt-icon [name]="item.action === 'LOGIN' ? 'shield' : 'user'"
+            /></span>
+            <div>
+              <strong>{{ activity(item.action) }}</strong
+              ><small>{{ item.createdAt | date: 'dd MMM yyyy · h:mm a' }}</small>
+            </div>
+            <span class="activity-state">Recorded</span>
+          </div>
+        } @empty {
+          <div class="empty-state">
+            Your account activity will appear here after your next action.
+          </div>
+        }
+      </div>
+      <div class="panel-foot"><bt-icon name="lock" />Only your account activity is shown here.</div>
+    </section>
+    <div class="side-panels">
+      <section class="panel organization-panel">
+        <span class="eyebrow dark">YOUR ORGANIZATION</span
+        ><span class="organization-icon"><bt-icon name="building" /></span>
+        <h2>{{ summary.organization.name }}</h2>
+        <dl>
+          <div>
+            <dt>Currency</dt>
+            <dd>{{ summary.organization.currency }}</dd>
+          </div>
+          <div>
+            <dt>Time zone</dt>
+            <dd>{{ summary.organization.timezone }}</dd>
+          </div>
+          <div>
+            <dt>Account email</dt>
+            <dd class="break-word">{{ auth.user()?.email }}</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="security-card">
+        <span class="icon-tile green-tile"><bt-icon name="shield" /></span>
+        <h3>Keep your workspace secure</h3>
+        <p>Use a unique password and keep your account details up to date.</p>
+        <a routerLink="/security">Review security <bt-icon name="arrow" /></a>
+      </section>
+    </div>
+  </div>
+}

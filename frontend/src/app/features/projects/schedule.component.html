@@ -1,0 +1,150 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">PROJECT SCHEDULE</span>
+    <h1>{{ project()?.name || 'Schedule' }}<span class="orange">.</span></h1>
+    <p>Milestones, tasks, owners and dependencies.</p>
+  </div>
+  @if (can('MILESTONE_CREATE')) {
+    <button class="btn primary" (click)="edit()">Add schedule item</button>
+  }
+</div>
+<a class="text-button" [routerLink]="['/projects', projectId]">← Project overview</a>
+@if (error()) {
+  <div class="notice error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (data(); as schedule) {
+  <div class="project-stat-strip">
+    <div>
+      <strong>{{ schedule.summary.progress }}%</strong><span>Schedule progress</span>
+    </div>
+    <div>
+      <strong>{{ schedule.summary.completed }}/{{ schedule.summary.total }}</strong
+      ><span>Items completed</span>
+    </div>
+    <div>
+      <strong>{{ schedule.summary.overdue }}</strong
+      ><span>Overdue items</span>
+    </div>
+  </div>
+  <p class="field-help">Progress basis: {{ schedule.summary.basis }}.</p>
+}
+@if (editing()) {
+  <section class="panel project-form">
+    <h2>{{ selected() ? 'Edit schedule item' : 'New schedule item' }}</h2>
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="schedule-kind">Type</label
+          ><select id="schedule-kind" formControlName="kind">
+            <option value="MILESTONE">Milestone</option>
+            <option value="TASK">Task</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="schedule-name">Name</label><input id="schedule-name" formControlName="name" />
+        </div>
+        <div class="field">
+          <label for="schedule-start">Start date</label
+          ><input id="schedule-start" type="date" formControlName="startDate" />
+        </div>
+        <div class="field">
+          <label for="schedule-due">Planned completion</label
+          ><input id="schedule-due" type="date" formControlName="plannedDate" />
+        </div>
+        <div class="field">
+          <label for="schedule-status">Status</label
+          ><select id="schedule-status" formControlName="status">
+            <option value="NOT_STARTED">Not started</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="DELAYED">Delayed</option>
+            <option value="COMPLETED">Completed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="schedule-progress">Progress %</label
+          ><input
+            id="schedule-progress"
+            type="number"
+            min="0"
+            max="100"
+            formControlName="progress"
+          />
+        </div>
+        <div class="field">
+          <label for="schedule-actual">Actual completion</label
+          ><input id="schedule-actual" type="date" formControlName="actualDate" />
+        </div>
+        <div class="field">
+          <label for="schedule-owner">Responsible person</label
+          ><select id="schedule-owner" formControlName="responsibleId">
+            <option value="">Unassigned</option>
+            @for (member of project()?.members || []; track member.user.id) {
+              @if (member.user.active) {
+                <option [value]="member.user.id">{{ member.user.name }}</option>
+              }
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="schedule-dependency">Dependency</label
+          ><select id="schedule-dependency" formControlName="dependencyId">
+            <option value="">None</option>
+            @for (item of data()?.items || []; track item.id) {
+              @if (item.id !== selected()?.id) {
+                <option [value]="item.id">{{ item.name }}</option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="schedule-description">Description</label
+        ><textarea id="schedule-description" formControlName="description" rows="3"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary" [disabled]="busy()">Save item</button
+        ><button type="button" class="btn" (click)="editing.set(false)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+<section class="panel schedule-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Timeline</h2>
+      <p>{{ data()?.items?.length || 0 }} schedule items</p>
+    </div>
+  </div>
+  <div class="timeline">
+    @for (item of data()?.items || []; track item.id) {
+      <article class="timeline-item" [class.complete]="item.status === 'COMPLETED'">
+        <span class="timeline-marker"></span>
+        <div class="timeline-body">
+          <div class="project-card-top">
+            <span>{{ label(item.kind) }} · {{ item.plannedDate | date: 'mediumDate' : 'UTC' }}</span
+            ><span class="tag" [class.green-tag]="item.status === 'COMPLETED'">{{
+              label(item.status)
+            }}</span>
+          </div>
+          <h3>{{ item.name }}</h3>
+          <p>{{ item.description || 'No description.' }}</p>
+          <div class="progress-track"><span [style.width.%]="item.progress"></span></div>
+          <small
+            >{{ item.progress }}% · {{ item.responsible?.name || 'Unassigned' }}
+            @if (item.dependencyId) {
+              · Has dependency
+            }
+          </small>
+          @if (can('MILESTONE_EDIT')) {
+            <button class="text-button" (click)="edit(item)">Edit</button>
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="empty-state">Add a milestone to establish the project schedule.</div>
+    }
+  </div>
+</section>

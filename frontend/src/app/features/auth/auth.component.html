@@ -1,0 +1,184 @@
+<main class="auth-layout">
+  <section class="auth-story" aria-label="About BuildTrack">
+    <img
+      class="story-photo"
+      src="/images/construction.jpg"
+      alt="Construction cranes above a building site"
+    />
+    <div class="story-shade"></div>
+    <a class="brand light" routerLink="/login"
+      ><img src="/images/mark.svg" alt="" />BuildTrack<span class="brand-dot">.</span></a
+    >
+    <div class="story-copy">
+      <span class="eyebrow"><span class="tiny-line"></span> BUILT FOR THE WAY YOU BUILD</span>
+      <h1>Great projects.<br />Stronger teams.<br /><em>One workspace.</em></h1>
+      <p>
+        Bring your people, projects, and site operations together. From the first foundation to the
+        final handover.
+      </p>
+      <div class="story-features">
+        <span><bt-icon name="check" />Connected teams</span
+        ><span><bt-icon name="check" />Clearer decisions</span>
+      </div>
+    </div>
+    <div class="story-footer">
+      <span>CONSTRUCTION. CONNECTED.</span><span>Build with confidence ↗</span>
+    </div>
+  </section>
+  <section class="auth-panel">
+    <div class="auth-top">
+      <span>CONSTRUCTION OPERATIONS PLATFORM</span
+      ><button
+        type="button"
+        class="help-link"
+        (click)="help.set(!help())"
+        [attr.aria-expanded]="help()"
+      >
+        <bt-icon name="help" />Need help?
+      </button>
+    </div>
+    <div class="auth-form-wrap">
+      <a class="brand mobile-brand" routerLink="/login"
+        ><img src="/images/mark.svg" alt="" />BuildTrack.</a
+      >
+      <span class="form-kicker">YOUR NEXT CHAPTER STARTS HERE</span>
+      @if (help()) {
+        <div class="notice" role="status">
+          Use your work email to sign in. Forgotten your password?
+          <a routerLink="/forgot-password">Request a reset link</a>. For team access, contact your
+          company administrator.
+        </div>
+      }
+      <h2>{{ title }}</h2>
+      <p class="form-subtitle">{{ subtitle }}</p>
+      @if (error()) {
+        <div class="notice error" role="alert">{{ error() }}</div>
+      }
+      @if (message()) {
+        <div class="notice success" role="status">
+          <bt-icon name="check" />{{ message() }} <a routerLink="/login">Sign in</a>
+        </div>
+      }
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        @if (mode === 'register') {
+          <div class="two-fields">
+            <div class="field">
+              <label for="name">Full name</label
+              ><input
+                id="name"
+                formControlName="name"
+                autocomplete="name"
+                placeholder="Your full name"
+                [class.invalid]="invalid('name')"
+              />
+            </div>
+            <div class="field">
+              <label for="phone">Phone <span class="optional">(optional)</span></label
+              ><input id="phone" formControlName="phone" autocomplete="tel" placeholder="+91" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="company">Company</label
+            ><input
+              id="company"
+              formControlName="company"
+              autocomplete="organization"
+              placeholder="Your company name"
+              [class.invalid]="invalid('company')"
+            />
+          </div>
+        }
+        @if (mode !== 'reset-password') {
+          <div class="field">
+            <label for="email">Work email</label>
+            <div class="input-icon">
+              <bt-icon name="mail" /><input
+                id="email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                placeholder="you@company.com"
+                [class.invalid]="invalid('email')"
+              />
+            </div>
+            @if (invalid('email')) {
+              <small class="field-error">Enter a valid email address.</small>
+            }
+          </div>
+        }
+        @if (mode !== 'forgot-password') {
+          <div class="field">
+            <label for="password">{{
+              mode === 'reset-password' ? 'New password' : 'Password'
+            }}</label>
+            <div class="input-icon">
+              <bt-icon name="lock" /><input
+                id="password"
+                [type]="visible() ? 'text' : 'password'"
+                formControlName="password"
+                [autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
+                placeholder="Enter your password"
+                [class.invalid]="invalid('password')"
+              /><button
+                type="button"
+                class="password-toggle"
+                (click)="visible.set(!visible())"
+                [attr.aria-label]="visible() ? 'Hide password' : 'Show password'"
+                [attr.aria-pressed]="visible()"
+              >
+                <bt-icon name="eye" />
+              </button>
+            </div>
+            @if (mode !== 'login') {
+              <small class="field-help"
+                >12–72 characters, including uppercase, lowercase, and a number.</small
+              >
+            }
+          </div>
+        }
+        @if (mode === 'register' || mode === 'reset-password') {
+          <div class="field">
+            <label for="confirm">Confirm password</label
+            ><input
+              id="confirm"
+              type="password"
+              formControlName="confirm"
+              autocomplete="new-password"
+              placeholder="Enter password again"
+            />
+          </div>
+        }
+        @if (mode === 'login') {
+          <div class="form-options">
+            <label class="checkbox"
+              ><input type="checkbox" formControlName="remember" />Keep me signed in</label
+            ><a routerLink="/forgot-password">Forgot password?</a>
+          </div>
+        }
+        <button class="btn primary full" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Please wait…' : action }}<bt-icon name="arrow" />
+        </button>
+        @if (mode === 'register') {
+          <p class="quiet-note">
+            New accounts receive client access in a separate company workspace. Team access is
+            assigned by an administrator.
+          </p>
+        }
+      </form>
+      <div class="auth-switch">
+        @if (mode === 'login') {
+          <span>New to BuildTrack?</span
+          ><a routerLink="/register">Create an account <span>↗</span></a>
+        } @else {
+          <a routerLink="/login">← Back to sign in</a>
+        }
+      </div>
+      <div class="trust-note">
+        <bt-icon name="shield" /><span>Secure access. Built around your team.</span>
+      </div>
+    </div>
+    <footer class="auth-footer">
+      <span>© 2026 BuildTrack</span><span>Built for progress.</span>
+    </footer>
+  </section>
+</main>

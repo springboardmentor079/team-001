@@ -1,0 +1,131 @@
+<div class="workspace" [class.sidebar-collapsed]="collapsed()" [class.drawer-open]="mobile()">
+  @if (mobile()) {
+    <button
+      class="drawer-backdrop"
+      aria-label="Close navigation"
+      (click)="mobile.set(false)"
+    ></button>
+  }
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand light" routerLink="/workspace"
+      ><img src="/images/mark.svg" alt="BuildTrack" /><span class="nav-text"
+        >BuildTrack<span class="brand-dot">.</span></span
+      ></a
+    >
+    <div class="org-switch">
+      <span class="org-monogram">BC</span>
+      <div class="nav-text">
+        <strong>{{ auth.user()?.organization?.name }}</strong
+        ><small>Company workspace</small>
+      </div>
+    </div>
+    <span class="nav-heading nav-text">WORKSPACE</span>
+    <nav (click)="mobile.set(false)">
+      <a routerLink="/workspace" routerLinkActive="active" title="Workspace overview"
+        ><bt-icon name="grid" /><span class="nav-text">Overview</span></a
+      >
+      @if (auth.user()?.permissions?.includes('PROJECT_VIEW')) {
+        <a routerLink="/projects" routerLinkActive="active" title="Projects"
+          ><bt-icon name="building" /><span class="nav-text">Projects</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('RESOURCE_VIEW')) {
+        <a routerLink="/equipment" routerLinkActive="active" title="Resource and equipment"
+          ><bt-icon name="activity" /><span class="nav-text">Equipment</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('INVENTORY_VIEW')) {
+        <a routerLink="/inventory" routerLinkActive="active" title="Inventory"
+          ><bt-icon name="building" /><span class="nav-text">Inventory</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('WORKFORCE_VIEW')) {
+        <a routerLink="/workforce" routerLinkActive="active" title="Workforce"
+          ><bt-icon name="users" /><span class="nav-text">Workforce</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('PROCUREMENT_VIEW')) {
+        <a routerLink="/procurement" routerLinkActive="active" title="Procurement"
+          ><bt-icon name="activity" /><span class="nav-text">Procurement</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('BUDGET_VIEW')) {
+        <a routerLink="/finance" routerLinkActive="active" title="Budgets and expenses"
+          ><bt-icon name="activity" /><span class="nav-text">Budgets & expenses</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('DOCUMENT_VIEW')) {
+        <a routerLink="/documents" routerLinkActive="active" title="Documents and reports"
+          ><bt-icon name="building" /><span class="nav-text">Documents & reports</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('REPORT_VIEW')) {
+        <a routerLink="/analytics" routerLinkActive="active" title="Analytics and insights"
+          ><bt-icon name="grid" /><span class="nav-text">Analytics & insights</span></a
+        >
+        <a routerLink="/ml-insights" routerLinkActive="active" title="Machine learning insights"
+          ><bt-icon name="activity" /><span class="nav-text">ML insights</span></a
+        >
+      }
+      @if (auth.user()?.permissions?.includes('USER_MANAGE')) {
+        <a routerLink="/users" routerLinkActive="active" title="Team directory"
+          ><bt-icon name="users" /><span class="nav-text">Team directory</span></a
+        >
+      }
+      <span class="nav-heading nav-text">MY ACCOUNT</span>
+      <a routerLink="/profile" routerLinkActive="active" title="My profile"
+        ><bt-icon name="user" /><span class="nav-text">My profile</span></a
+      >
+      <a routerLink="/security" routerLinkActive="active" title="Security"
+        ><bt-icon name="shield" /><span class="nav-text">Security</span></a
+      >
+      <a routerLink="/notifications" routerLinkActive="active" title="Notifications"
+        ><bt-icon name="activity" /><span class="nav-text">Notifications</span></a
+      >
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="workspace-note nav-text">
+        <span class="status-dot"></span> A foundation for better building
+        <p>Your team. Your workspace.</p>
+      </div>
+      <button (click)="logout()" [disabled]="signingOut()" title="Sign out">
+        <bt-icon name="logout" /><span class="nav-text">{{
+          signingOut() ? 'Signing out…' : 'Sign out'
+        }}</span>
+      </button>
+      <div class="sidebar-version nav-text">BUILDTRACK <span>WORKSPACE / 01</span></div>
+    </div>
+  </aside>
+  <div class="workspace-main">
+    <header class="topbar">
+      <div class="breadcrumb">
+        <button
+          class="icon-button"
+          (click)="toggle()"
+          aria-label="Toggle navigation"
+          [attr.aria-expanded]="mobile() || !collapsed()"
+        >
+          <bt-icon name="menu" /></button
+        ><span class="breadcrumb-root">Workspace</span><bt-icon name="chevron" /><strong>{{
+          pageName
+        }}</strong>
+      </div>
+      <a class="header-profile" routerLink="/profile"
+        ><span class="avatar">{{ initials }}</span
+        ><span class="profile-meta"
+          ><strong>{{ auth.user()?.name }}</strong
+          ><small>{{ label(auth.user()?.role || '') }}</small></span
+        ><bt-icon name="chevron"
+      /></a>
+    </header>
+    <main class="content">
+      @if (error()) {
+        <div class="notice error" role="alert">{{ error() }}</div>
+      }
+      <router-outlet />
+    </main>
+    <footer class="workspace-footer">
+      <span>© 2026 BuildTrack</span><span>One workspace. Built for progress.</span>
+    </footer>
+  </div>
+</div>

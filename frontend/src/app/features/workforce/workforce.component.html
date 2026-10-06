@@ -1,0 +1,69 @@
+<div class="page-heading">
+  <div><span class="eyebrow dark">PEOPLE & SHIFTS</span><h1>Workforce<span class="orange">.</span></h1><p>Assignments, attendance, shifts and approved-hours payroll estimates.</p></div>
+  <div class="member-actions">
+    @if (can('ATTENDANCE_MANAGE')) { <button class="btn" (click)="open('attendance')">Record attendance</button> }
+    @if (can('SHIFT_MANAGE')) { <button class="btn" (click)="open('shift')">Schedule shift</button> }
+    @if (can('WORKER_CREATE')) { <button class="btn primary" (click)="open('worker')">Add worker</button> }
+  </div>
+</div>
+@if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
+@if (message()) { <div class="notice success" role="status">{{ message() }}</div> }
+@if (data(); as d) {
+  <div class="project-stat-strip equipment-stats">
+    <div><strong>{{ d.summary.total }}</strong><span>Workers</span></div>
+    <div><strong>{{ d.summary.active }}</strong><span>Active</span></div>
+    <div><strong>{{ d.summary.onLeave }}</strong><span>On leave</span></div>
+    <div><strong>{{ d.summary.approvedHours }}</strong><span>Approved hours</span></div>
+    <div><strong>{{ d.summary.estimatedPayroll | currency: auth.user()?.organization?.currency }}</strong><span>Payroll estimate</span></div>
+  </div>
+}
+@if (mode() === 'worker') {
+  <section class="panel project-form"><h2>Add worker</h2><form [formGroup]="workerForm" (ngSubmit)="saveWorker()"><div class="project-fields">
+    <div class="field"><label for="worker-code">Employee ID</label><input id="worker-code" formControlName="employeeCode"></div>
+    <div class="field"><label for="worker-name">Worker name</label><input id="worker-name" formControlName="name"></div>
+    <div class="field"><label for="worker-category">Category</label><input id="worker-category" formControlName="category"></div>
+    <div class="field"><label for="worker-phone">Phone</label><input id="worker-phone" formControlName="phone"></div>
+    <div class="field"><label for="worker-rate">Hourly rate</label><input id="worker-rate" formControlName="hourlyRate"></div>
+    <div class="field"><label for="worker-status">Status</label><select id="worker-status" formControlName="status"><option value="ACTIVE">Active</option><option value="ON_LEAVE">On leave</option><option value="INACTIVE">Inactive</option></select></div>
+  </div><div class="member-actions"><button class="btn primary" [disabled]="busy()">Save worker</button><button type="button" class="btn" (click)="mode.set(null)">Cancel</button></div></form></section>
+}
+@if (mode() === 'assignment') {
+  <section class="panel project-form"><h2>Assign {{ selected()?.name }}</h2><form [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()"><div class="project-fields">
+    <div class="field"><label for="assign-project">Project</label><select id="assign-project" formControlName="projectId"><option value="">Select project</option>@for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div>
+    <div class="field"><label for="assign-role">Site role</label><input id="assign-role" formControlName="role"></div>
+    <div class="field"><label for="assign-start">Start date</label><input id="assign-start" type="date" formControlName="startDate"></div>
+    <div class="field"><label for="assign-end">End date (optional)</label><input id="assign-end" type="date" formControlName="endDate"></div>
+  </div><div class="member-actions"><button class="btn primary">Assign worker</button><button type="button" class="btn" (click)="mode.set(null)">Cancel</button></div></form></section>
+}
+@if (mode() === 'attendance') {
+  <section class="panel project-form"><h2>Record attendance</h2><form [formGroup]="attendanceForm" (ngSubmit)="saveAttendance()"><div class="project-fields">
+    <div class="field"><label for="att-worker">Worker</label><select id="att-worker" formControlName="workerId"><option value="">Select worker</option>@for (w of data()?.workers || []; track w.id) { <option [value]="w.id">{{ w.name }}</option> }</select></div>
+    <div class="field"><label for="att-project">Project</label><select id="att-project" formControlName="projectId"><option value="">Select project</option>@for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div>
+    <div class="field"><label for="att-date">Work date</label><input id="att-date" type="date" formControlName="workDate"></div>
+    <div class="field"><label for="att-status">Attendance status</label><select id="att-status" formControlName="status"><option value="PRESENT">Present</option><option value="HALF_DAY">Half day</option><option value="ABSENT">Absent</option><option value="LEAVE">Leave</option></select></div>
+    <div class="field"><label for="att-hours">Hours</label><input id="att-hours" formControlName="hours"></div>
+    <div class="field"><label for="att-notes">Notes</label><input id="att-notes" formControlName="notes"></div>
+  </div><label class="check-row"><input type="checkbox" formControlName="approved"> Approve these hours now</label><div class="member-actions"><button class="btn primary">Save attendance</button><button type="button" class="btn" (click)="mode.set(null)">Cancel</button></div></form></section>
+}
+@if (mode() === 'shift') {
+  <section class="panel project-form"><h2>Schedule shift</h2><form [formGroup]="shiftForm" (ngSubmit)="saveShift()"><div class="project-fields">
+    <div class="field"><label for="shift-worker">Worker</label><select id="shift-worker" formControlName="workerId"><option value="">Select worker</option>@for (w of data()?.workers || []; track w.id) { <option [value]="w.id">{{ w.name }}</option> }</select></div>
+    <div class="field"><label for="shift-project">Project</label><select id="shift-project" formControlName="projectId"><option value="">Select project</option>@for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div>
+    <div class="field"><label for="shift-start">Shift starts</label><input id="shift-start" type="datetime-local" formControlName="startAt"></div>
+    <div class="field"><label for="shift-end">Shift ends</label><input id="shift-end" type="datetime-local" formControlName="endAt"></div>
+    <div class="field"><label for="shift-location">Location</label><input id="shift-location" formControlName="location"></div>
+    <div class="field"><label for="shift-notes">Notes</label><input id="shift-notes" formControlName="notes"></div>
+  </div><div class="member-actions"><button class="btn primary">Schedule shift</button><button type="button" class="btn" (click)="mode.set(null)">Cancel</button></div></form></section>
+}
+<section class="panel"><div class="table-scroll"><table><thead><tr><th>Worker</th><th>Category</th><th>Status</th><th>Rate</th><th>Assignments</th><th>Actions</th></tr></thead><tbody>
+  @for (w of data()?.workers || []; track w.id) { <tr><td><strong>{{ w.name }}</strong><small>{{ w.employeeCode }} · {{ w.phone || 'No phone' }}</small></td><td>{{ w.category }}</td><td>{{ label(w.status) }}</td><td>{{ w.hourlyRate | currency: auth.user()?.organization?.currency }} / hr</td><td>@for (a of w.assignments; track a.id) { <span class="tag green-tag">{{ a.project.name }}</span> } @if (!w.assignments.length) { — }</td><td>@if (can('WORKER_CREATE')) { <button class="text-button" (click)="open('assignment', w)">Assign</button> }</td></tr> } @empty { <tr><td colspan="6">No workers added.</td></tr> }
+</tbody></table></div></section>
+<section class="panel project-info"><h2>Attendance</h2><div class="table-scroll"><table><thead><tr><th>Date</th><th>Worker</th><th>Project</th><th>Status</th><th>Hours</th><th>Approval</th></tr></thead><tbody>
+  @for (a of data()?.attendance || []; track a.id) { <tr><td>{{ a.workDate | date: 'mediumDate' : 'UTC' }}</td><td>{{ a.worker.name }}</td><td>{{ a.project.name }}</td><td>{{ label(a.status) }}</td><td>{{ a.hours }}</td><td>{{ a.approved ? 'Approved' : 'Pending' }} @if (can('ATTENDANCE_MANAGE')) { <button class="text-button" (click)="approve(a, !a.approved)">{{ a.approved ? 'Reopen' : 'Approve' }}</button> }</td></tr> } @empty { <tr><td colspan="6">No attendance recorded.</td></tr> }
+</tbody></table></div></section>
+<section class="panel project-info"><h2>Upcoming shifts</h2><div class="table-scroll"><table><thead><tr><th>Worker</th><th>Project</th><th>Starts</th><th>Ends</th><th>Location</th></tr></thead><tbody>
+  @for (s of data()?.shifts || []; track s.id) { <tr><td>{{ s.worker.name }}</td><td>{{ s.project.name }}</td><td>{{ s.startAt | date: 'medium' }}</td><td>{{ s.endAt | date: 'shortTime' }}</td><td>{{ s.location || '—' }}</td></tr> } @empty { <tr><td colspan="5">No upcoming shifts.</td></tr> }
+</tbody></table></div></section>
+<section class="panel project-info"><h2>Payroll monitoring</h2><p>Estimate only: approved attendance hours × current hourly rate. This is not a payroll ledger or payment record.</p><div class="table-scroll"><table><thead><tr><th>Worker</th><th>Approved hours</th><th>Hourly rate</th><th>Estimated pay</th></tr></thead><tbody>
+  @for (p of data()?.payroll || []; track p.workerId) { <tr><td>{{ p.worker }}</td><td>{{ p.approvedHours }}</td><td>{{ p.hourlyRate | currency: auth.user()?.organization?.currency }}</td><td><strong>{{ p.estimatedPay | currency: auth.user()?.organization?.currency }}</strong></td></tr> } @empty { <tr><td colspan="4">No payroll estimates.</td></tr> }
+</tbody></table></div></section>

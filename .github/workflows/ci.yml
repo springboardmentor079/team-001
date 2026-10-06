@@ -1,0 +1,53 @@
+name: BuildTrack checks
+on: [push, pull_request]
+jobs:
+  full-regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: buildtrack
+          POSTGRES_PASSWORD: ci-only-buildtrack-password
+          POSTGRES_DB: buildtrack
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U buildtrack" --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      DATABASE_URL: postgresql://buildtrack:ci-only-buildtrack-password@localhost:5432/buildtrack
+      JWT_SECRET: ci-only-secret-for-isolated-tests-do-not-use-in-production-2026
+      APP_ORIGIN: http://localhost:4200
+      MAIL_PROVIDER: local
+      DEMO_PASSWORD: BuildTrackDemo2026!
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev
+      - run: npm run db:generate
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: PGPASSWORD=ci-only-buildtrack-password createdb -h localhost -U buildtrack buildtrack_test
+      - run: node scripts/prepare-test-db.cjs
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+      - run: npm test -w frontend
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          npm run dev > /tmp/buildtrack.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:4200 >/dev/null && curl -fsS http://localhost:4300/api/ready >/dev/null; then break; fi
+            sleep 2
+          done
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: |
+            playwright-report
+            test-results

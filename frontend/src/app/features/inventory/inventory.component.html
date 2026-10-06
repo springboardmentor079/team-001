@@ -1,0 +1,237 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">MATERIAL CONTROL</span>
+    <h1>Inventory<span class="orange">.</span></h1>
+    <p>Stock levels, material requests and transactional movements.</p>
+  </div>
+  <div class="member-actions">
+    @if (can('MATERIAL_REQUEST_CREATE')) {
+      <button class="btn" (click)="open('request')">New request</button>
+    }
+    @if (can('INVENTORY_UPDATE')) {
+      <button class="btn primary" (click)="open('material')">Add material</button>
+    }
+  </div>
+</div>
+@if (error()) {
+  <div class="notice error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (data(); as d) {
+  <div class="project-stat-strip equipment-stats">
+    <div>
+      <strong>{{ d.summary.total }}</strong
+      ><span>Total materials</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.low }}</strong
+      ><span>Low stock</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.critical }}</strong
+      ><span>Critical</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.out }}</strong
+      ><span>Out of stock</span>
+    </div>
+    <div>
+      <strong>{{ d.summary.pending }}</strong
+      ><span>Pending requests</span>
+    </div>
+  </div>
+}
+@if (mode() === 'material') {
+  <section class="panel project-form">
+    <h2>Add material</h2>
+    <form [formGroup]="materialForm" (ngSubmit)="saveMaterial()">
+      <div class="project-fields">
+        @for (
+          f of [
+            ['sku', 'SKU'],
+            ['name', 'Material name'],
+            ['category', 'Category'],
+            ['unit', 'Unit'],
+            ['currentStock', 'Opening stock'],
+            ['minimumLevel', 'Minimum level'],
+            ['criticalLevel', 'Critical level'],
+            ['unitCost', 'Unit cost'],
+            ['supplier', 'Supplier'],
+          ];
+          track f[0]
+        ) {
+          <div class="field">
+            <label [for]="'material-' + f[0]">{{ f[1] }}</label
+            ><input [id]="'material-' + f[0]" [formControlName]="f[0]" />
+          </div>
+        }
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Save material</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'request') {
+  <section class="panel project-form">
+    <h2>Material request</h2>
+    <form [formGroup]="requestForm" (ngSubmit)="saveRequest()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="request-project">Project</label
+          ><select id="request-project" formControlName="projectId">
+            <option value="">Select project</option>
+            @for (p of projects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="request-material">Material</label
+          ><select id="request-material" formControlName="materialId">
+            <option value="">Select material</option>
+            @for (m of data()?.materials || []; track m.id) {
+              <option [value]="m.id">{{ m.name }} ({{ m.unit }})</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="request-quantity">Quantity</label
+          ><input id="request-quantity" formControlName="quantity" />
+        </div>
+        <div class="field">
+          <label for="request-date">Required date</label
+          ><input id="request-date" type="date" formControlName="requiredDate" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="request-purpose">Purpose</label
+        ><textarea id="request-purpose" formControlName="purpose"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Submit request</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+@if (mode() === 'adjust') {
+  <section class="panel project-form">
+    <h2>Adjust {{ selected()?.name }}</h2>
+    <form [formGroup]="adjustForm" (ngSubmit)="adjust()">
+      <div class="project-fields">
+        <div class="field">
+          <label for="stock-delta">Quantity change</label
+          ><input id="stock-delta" formControlName="delta" /><small
+            >Use a negative value for a correction.</small
+          >
+        </div>
+        <div class="field">
+          <label for="stock-note">Reason</label><input id="stock-note" formControlName="note" />
+        </div>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary">Save adjustment</button
+        ><button type="button" class="btn" (click)="mode.set(null)">Cancel</button>
+      </div>
+    </form>
+  </section>
+}
+<section class="panel">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Category</th>
+          <th>Available</th>
+          <th>Allocated</th>
+          <th>Minimum</th>
+          <th>Status</th>
+          <th>Supplier</th>
+          <th>Cost</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of data()?.materials || []; track m.id) {
+          <tr>
+            <td>
+              <strong>{{ m.name }}</strong
+              ><small>{{ m.sku }}</small>
+            </td>
+            <td>{{ m.category }}</td>
+            <td>{{ +m.currentStock - +m.allocatedStock }} {{ m.unit }}</td>
+            <td>{{ m.allocatedStock }} {{ m.unit }}</td>
+            <td>{{ m.minimumLevel }}</td>
+            <td>
+              <span class="tag" [class.green-tag]="m.stockStatus === 'HEALTHY'">{{
+                label(m.stockStatus)
+              }}</span>
+            </td>
+            <td>{{ m.supplier || '—' }}</td>
+            <td>{{ m.unitCost | currency: auth.user()?.organization?.currency }}</td>
+            <td>
+              @if (can('INVENTORY_UPDATE')) {
+                <button class="text-button" (click)="open('adjust', m)">Adjust stock</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9">No materials added.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+<section class="panel project-info">
+  <h2>Material requests</h2>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Material</th>
+          <th>Quantity</th>
+          <th>Required</th>
+          <th>Requester</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of data()?.requests || []; track r.id) {
+          <tr>
+            <td>{{ r.project.name }}</td>
+            <td>{{ r.material.name }}</td>
+            <td>{{ r.quantity }} {{ r.material.unit }}</td>
+            <td>{{ r.requiredDate | date: 'mediumDate' : 'UTC' }}</td>
+            <td>{{ r.requester?.name }}</td>
+            <td>{{ label(r.status) }}</td>
+            <td>
+              @if (can('INVENTORY_UPDATE') && r.status === 'SUBMITTED') {
+                <button class="text-button" (click)="transition(r, 'APPROVED')">Approve</button
+                ><button class="text-button" (click)="transition(r, 'REJECTED')">Reject</button>
+              }
+              @if (can('INVENTORY_UPDATE') && r.status === 'APPROVED') {
+                <button class="text-button" (click)="transition(r, 'ALLOCATED')">Allocate</button>
+              }
+              @if (can('INVENTORY_UPDATE') && r.status === 'ALLOCATED') {
+                <button class="text-button" (click)="transition(r, 'FULFILLED')">Fulfil</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7">No material requests.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

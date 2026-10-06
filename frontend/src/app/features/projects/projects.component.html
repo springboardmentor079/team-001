@@ -1,0 +1,291 @@
+<div class="page-heading">
+  <div>
+    <span class="eyebrow dark">PROJECT DELIVERY</span>
+    <h1>{{ project()?.name || 'Projects' }}<span class="orange">.</span></h1>
+    <p>
+      {{
+        detailId
+          ? 'Project information and assigned team.'
+          : 'Plan, organize and follow your construction projects.'
+      }}
+    </p>
+  </div>
+  @if (can('PROJECT_CREATE') && !detailId) {
+    <button class="btn primary" (click)="edit()" [disabled]="busy()">Create project</button>
+  }
+  @if (project() && can('PROJECT_EDIT') && !['CLOSED', 'CANCELLED'].includes(project()!.status)) {
+    <button class="btn primary" (click)="edit()" [disabled]="busy()">Edit project</button>
+  }
+</div>
+@if (detailId) {
+  <a class="text-button" routerLink="/projects">← All projects</a>
+}
+@if (error()) {
+  <div class="notice error" role="alert">
+    {{ error() }} <button class="text-button" (click)="load()">Reload</button>
+  </div>
+}
+@if (message()) {
+  <div class="notice success" role="status">{{ message() }}</div>
+}
+@if (editing()) {
+  <section class="panel project-form">
+    <h2>{{ project() ? 'Edit project' : 'Create project' }}</h2>
+    <p>Projects start in Planning. You will be assigned automatically.</p>
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <h3>01 / Project information</h3>
+      <div class="project-fields">
+        <div class="field">
+          <label for="project-code">Project code *</label
+          ><input
+            id="project-code"
+            formControlName="code"
+            placeholder="BT-2026-001"
+            maxlength="30"
+          />
+        </div>
+        <div class="field">
+          <label for="project-name">Project name *</label
+          ><input id="project-name" formControlName="name" maxlength="150" />
+        </div>
+        <div class="field">
+          <label for="project-category">Category *</label
+          ><select id="project-category" formControlName="category">
+            <option>Residential</option>
+            <option>Commercial</option>
+            <option>Infrastructure</option>
+            <option>Industrial</option>
+            <option>Renovation</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="project-priority">Priority</label
+          ><select id="project-priority" formControlName="priority">
+            <option>LOW</option>
+            <option>MEDIUM</option>
+            <option>HIGH</option>
+            <option>CRITICAL</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="project-description">Description</label
+        ><textarea
+          id="project-description"
+          formControlName="description"
+          maxlength="5000"
+          rows="3"
+        ></textarea>
+      </div>
+      <h3>02 / Location</h3>
+      <div class="project-fields">
+        <div class="field">
+          <label for="project-address">Address *</label
+          ><input id="project-address" formControlName="address" maxlength="300" />
+        </div>
+        <div class="field">
+          <label for="project-city">City *</label
+          ><input id="project-city" formControlName="city" maxlength="100" />
+        </div>
+        <div class="field">
+          <label for="project-state">State *</label
+          ><input id="project-state" formControlName="state" maxlength="100" />
+        </div>
+        <div class="field">
+          <label for="project-country">Country *</label
+          ><input id="project-country" formControlName="country" maxlength="100" />
+        </div>
+      </div>
+      <h3>03 / Timeline and finance</h3>
+      <div class="project-fields">
+        <div class="field">
+          <label for="project-start">Start date *</label
+          ><input id="project-start" type="date" formControlName="startDate" />
+        </div>
+        <div class="field">
+          <label for="project-end">Expected end date *</label
+          ><input id="project-end" type="date" formControlName="endDate" />
+        </div>
+        <div class="field">
+          <label for="project-budget">Budget ({{ auth.user()?.organization?.currency }}) *</label
+          ><input id="project-budget" inputmode="decimal" formControlName="budget" />
+        </div>
+        <div class="field">
+          <label for="project-estimate">Estimated cost *</label
+          ><input id="project-estimate" inputmode="decimal" formControlName="estimatedCost" />
+        </div>
+      </div>
+      <h3>04 / Team and notes</h3>
+      <div class="field">
+        <label for="project-members">Assigned team</label
+        ><select id="project-members" multiple formControlName="memberIds" size="6">
+          @for (member of team(); track member.id) {
+            <option [value]="member.id">{{ member.name }} · {{ label(member.role) }}</option>
+          }</select
+        ><small class="field-help"
+          >Hold Ctrl or Command to select multiple people. Assigned members gain access according to
+          their role.</small
+        >
+      </div>
+      <div class="field">
+        <label for="project-notes">Notes</label
+        ><textarea id="project-notes" formControlName="notes" maxlength="5000" rows="3"></textarea>
+      </div>
+      <div class="member-actions">
+        <button class="btn primary" [disabled]="busy()">
+          {{ busy() ? 'Saving…' : 'Save project' }}</button
+        ><button type="button" class="btn" (click)="editing.set(false)" [disabled]="busy()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </section>
+} @else if (loading()) {
+  <div class="skeleton" style="height: 240px" aria-label="Loading projects" aria-busy="true"></div>
+} @else if (project(); as p) {
+  <section class="project-banner">
+    <span class="eyebrow">{{ p.code }} / {{ p.category }}</span>
+    <h2>{{ p.name }}</h2>
+    <p>{{ p.city }}, {{ p.state }} · {{ p.country }}</p>
+    <span class="tag orange-tag">{{ label(p.status) }}</span>
+  </section>
+  <nav class="project-tabs" aria-label="Project sections">
+    <a [routerLink]="['/projects', p.id]" class="active">Overview</a>
+    @if (can('MILESTONE_VIEW')) {
+      <a [routerLink]="['/projects', p.id, 'schedule']">Timeline & milestones</a>
+    }
+    @if (can('SITE_REPORT_VIEW')) {
+      <a [routerLink]="['/projects', p.id, 'site']">Site operations</a>
+    }
+  </nav>
+  <div class="project-stat-strip compact">
+    <div>
+      <strong>{{ p.schedule.progress }}%</strong><span>Schedule progress</span>
+    </div>
+    <div>
+      <strong>{{ p.schedule.completed }}/{{ p.schedule.total }}</strong
+      ><span>Completed items</span>
+    </div>
+    <div>
+      <strong>{{ p.schedule.overdue }}</strong
+      ><span>Overdue items</span>
+    </div>
+  </div>
+  <div class="project-detail-grid">
+    <section class="panel project-info">
+      <h2>Project overview</h2>
+      <p>{{ p.description || 'No description added.' }}</p>
+      <dl>
+        <dt>Site address</dt>
+        <dd>{{ p.address }}, {{ p.city }}</dd>
+        <dt>Timeline</dt>
+        <dd>
+          {{ p.startDate | date: 'mediumDate' : 'UTC' }} —
+          {{ p.endDate | date: 'mediumDate' : 'UTC' }}
+        </dd>
+        <dt>Priority</dt>
+        <dd>{{ label(p.priority) }}</dd>
+        @if (p.budget !== undefined) {
+          <dt>Budget</dt>
+          <dd>{{ p.budget | currency: auth.user()?.organization?.currency }}</dd>
+          <dt>Estimated cost</dt>
+          <dd>{{ p.estimatedCost | currency: auth.user()?.organization?.currency }}</dd>
+        }
+      </dl>
+      <h3>Notes</h3>
+      <p class="preserve-lines">{{ p.notes || 'No notes added.' }}</p>
+      @if (can('PROJECT_CLOSE') && transitions.length) {
+        <div class="field">
+          <label for="project-status">Update status</label
+          ><select id="project-status" #status>
+            <option value="">Choose next status</option>
+            @for (next of transitions; track next) {
+              <option [value]="next">{{ label(next) }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn primary" [disabled]="busy()" (click)="changeStatus(status.value)">
+          Update status
+        </button>
+      }
+    </section>
+    <section class="panel project-info">
+      <h2>Assigned team</h2>
+      <p>{{ p.members.length }} people on this project</p>
+      @for (member of p.members; track member.user.id) {
+        <div class="project-person">
+          <span class="avatar">{{ member.user.name.charAt(0) }}</span>
+          <div>
+            <strong>{{ member.user.name }}</strong
+            ><small
+              >{{ label(member.user.role) }}{{ member.user.active ? '' : ' · Inactive' }}</small
+            >
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+} @else if (!detailId) {
+  <div class="project-stat-strip">
+    <div>
+      <strong>{{ projects().length }}</strong
+      ><span>Projects in view</span>
+    </div>
+    <div>
+      <strong>{{ activeCount }}</strong
+      ><span>Active projects</span>
+    </div>
+    <div>
+      <strong>{{ delayedCount }}</strong
+      ><span>Marked delayed</span>
+    </div>
+  </div>
+  <form class="project-filters" [formGroup]="filter" (ngSubmit)="load()">
+    <div class="field">
+      <label for="project-search">Find a project</label
+      ><input
+        id="project-search"
+        formControlName="search"
+        placeholder="Search by name, code or city"
+      />
+    </div>
+    <div class="field">
+      <label for="project-filter-status">Status</label
+      ><select id="project-filter-status" formControlName="status">
+        <option value="">All statuses</option>
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ label(s) }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn primary">Apply filters</button>
+  </form>
+  <div class="project-cards">
+    @for (p of projects(); track p.id) {
+      <a class="panel project-card" [routerLink]="['/projects', p.id]"
+        ><div class="project-card-top">
+          <span>{{ p.code }}</span
+          ><span class="tag" [class.green-tag]="p.status === 'ACTIVE'">{{ label(p.status) }}</span>
+        </div>
+        <h2>{{ p.name }}</h2>
+        <p>{{ p.city }}, {{ p.state }}</p>
+        <div class="project-card-bottom">
+          <span>{{ p.endDate | date: 'mediumDate' : 'UTC' }}<small>Expected completion</small></span
+          ><span>{{ p.members.length }}<small>Team members</small></span>
+        </div>
+        <span class="text-button">View project →</span></a
+      >
+    } @empty {
+      <section class="panel project-info">
+        <h2>No projects found</h2>
+        <p>
+          {{
+            can('PROJECT_CREATE')
+              ? 'Create your first project or adjust the filters.'
+              : 'Projects will appear when your administrator or project manager assigns you.'
+          }}
+        </p>
+      </section>
+    }
+  </div>
+}
