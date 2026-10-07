@@ -399,7 +399,11 @@ test('document upload, authorized downloads, reports and recipient notification 
   await page.locator('#doc-project').selectOption(project.id);
   await page.getByLabel('Document title').fill('Tower A approved drawing');
   await page.getByLabel('Category').selectOption('Drawing');
-  await page.getByLabel('File').setInputFiles('e2e/fixtures/test-document.pdf');
+  await page.getByLabel('File').setInputFiles({
+    name: 'test-document.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n'),
+  });
   await page.getByRole('button', { name: 'Upload file' }).click();
   await expect(page.getByRole('status')).toHaveText('Document uploaded.');
   const documentRow = page.getByRole('row').filter({ hasText: 'Tower A approved drawing' });

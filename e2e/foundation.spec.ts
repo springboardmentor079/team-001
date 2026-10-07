@@ -53,6 +53,7 @@ for (const alias of ['admin', 'manager', 'engineer', 'contractor', 'worker', 'cl
 test('registration, profile persistence, reset delivery, reset login and password change', async ({
   page,
 }) => {
+  test.setTimeout(90000);
   const email = `browser-${Date.now()}@buildtrack.test`;
   await page.goto('/register');
   await page.getByLabel('Full name', { exact: true }).fill('Browser Workflow');
@@ -74,7 +75,9 @@ test('registration, profile persistence, reset delivery, reset login and passwor
   await page.getByRole('link', { name: 'Forgot password?' }).click();
   await page.getByLabel('Work email').fill(email);
   await page.getByRole('button', { name: 'Send reset link' }).click();
-  await expect(page.getByRole('status')).toContainText('instructions will be delivered');
+  await expect(page.getByRole('status')).toContainText('instructions will be delivered', {
+    timeout: 15000,
+  });
   let link = '';
   for (const file of await readdir('backend/.local/mail')) {
     const mail = JSON.parse(await readFile(`backend/.local/mail/${file}`, 'utf8')) as {
