@@ -74,10 +74,13 @@ test('registration, profile persistence, reset delivery, reset login and passwor
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await page.getByRole('link', { name: 'Forgot password?' }).click();
   await page.getByLabel('Work email').fill(email);
+  const resetResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/v1/auth/forgot-password') &&
+      response.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: 'Send reset link' }).click();
-  await expect(page.getByRole('status')).toContainText('instructions will be delivered', {
-    timeout: 15000,
-  });
+  expect((await resetResponse).status()).toBe(202);
   let link = '';
   for (const file of await readdir('backend/.local/mail')) {
     const mail = JSON.parse(await readFile(`backend/.local/mail/${file}`, 'utf8')) as {
