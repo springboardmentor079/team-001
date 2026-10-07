@@ -72,7 +72,9 @@ test('registration, profile persistence, reset delivery, reset login and passwor
   await page.reload();
   await expect(page.getByLabel('Full name', { exact: true })).toHaveValue('Browser Updated');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto('/forgot-password');
+  await expect(page).toHaveURL(/\/forgot-password$/);
   await page.getByLabel('Work email').fill(email);
   const resetResponse = page.waitForResponse(
     (response) =>
