@@ -2,6 +2,10 @@ import 'dotenv/config';
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 const db = new PrismaClient();
+const dayMs = 86_400_000;
+const daysAfter = (date: Date, days: number) => new Date(date.getTime() + days * dayMs);
+const trainingId = (series: number, index: number) =>
+  `${series.toString(16).padStart(8, '0')}-0000-4000-8000-${String(index).padStart(12, '0')}`;
 async function seed() {
   if (process.env.NODE_ENV === 'production')
     throw new Error('Demo seed is disabled in production.');
@@ -160,6 +164,109 @@ async function seed() {
         },
       });
     }
+  }
+  const manager = team.find((user) => user.role === 'PROJECT_MANAGER')!;
+  const costOutcomeRatios = [0.68, 0.74, 0.79, 0.83, 0.88, 0.93, 0.97, 1.02, 1.08, 1.14, 0.86, 1.2];
+  const estimateRatios = [0.65, 0.7, 0.76, 0.8, 0.84, 0.89, 0.92, 0.96, 1.0, 1.04, 0.82, 1.08];
+  for (let index = 0; index < costOutcomeRatios.length; index += 1) {
+    const sequence = index + 1;
+    const code = `ML-HIST-${String(sequence).padStart(2, '0')}`;
+    const budget = 10_000_000 + index * 750_000;
+    const startDate = new Date(Date.UTC(2024, index % 6, 1));
+    const endDate = daysAfter(startDate, 180 + index * 18);
+    const project = await db.project.upsert({
+      where: { organizationId_code: { organizationId: organization.id, code } },
+      update: {},
+      create: {
+        id: trainingId(48, sequence),
+        organizationId: organization.id,
+        code,
+        name: `ML historical project ${String(sequence).padStart(2, '0')}`,
+        description: 'Synthetic closed-project outcome used only to demonstrate organization-scoped ML training.',
+        category: index % 3 === 0 ? 'Infrastructure' : index % 2 === 0 ? 'Commercial' : 'Residential',
+        address: 'Historical demonstration site',
+        city: index % 2 === 0 ? 'Pune' : 'Bengaluru',
+        state: index % 2 === 0 ? 'Maharashtra' : 'Karnataka',
+        country: 'India',
+        status: 'CLOSED',
+        priority: index >= 8 || index % 4 === 0 ? 'HIGH' : 'MEDIUM',
+        startDate,
+        endDate,
+        budget: budget.toFixed(2),
+        estimatedCost: (budget * estimateRatios[index]!).toFixed(2),
+        notes: 'DEMO_ML_TRAINING_DATA: safe to replace with verified historical project outcomes.',
+      },
+    });
+    await db.projectMember.createMany({
+      data: team.map((user) => ({ projectId: project.id, userId: user.id })),
+      skipDuplicates: true,
+    });
+    const isLate = index % 2 === 1;
+    const workStart = daysAfter(startDate, 14);
+    const plannedDate = daysAfter(workStart, 30 + index * 4);
+    const workItem = await db.workItem.upsert({
+      where: { id: trainingId(49, sequence) },
+      update: {
+        projectId: project.id,
+        actualDate: daysAfter(plannedDate, isLate ? 5 + index : -(2 + (index % 3))),
+        status: 'COMPLETED',
+        progress: 100,
+      },
+      create: {
+        id: trainingId(49, sequence),
+        projectId: project.id,
+        kind: index % 3 === 0 ? 'MILESTONE' : 'TASK',
+        name: `Historical schedule outcome ${String(sequence).padStart(2, '0')}`,
+        description: 'Synthetic completed schedule record for delay-classifier training.',
+        startDate: workStart,
+        plannedDate,
+        actualDate: daysAfter(plannedDate, isLate ? 5 + index : -(2 + (index % 3))),
+        status: 'COMPLETED',
+        progress: 100,
+        weight: '1',
+        baselineStartDate: workStart,
+        baselinePlannedDate: plannedDate,
+        responsibleId: manager.id,
+      },
+    });
+    if (isLate)
+      await db.siteDelay.upsert({
+        where: { id: trainingId(51, sequence) },
+        update: {},
+        create: {
+          id: trainingId(51, sequence),
+          projectId: project.id,
+          reporterId: manager.id,
+          workItemId: workItem.id,
+          date: plannedDate,
+          cause: index % 4 === 1 ? 'Synthetic supplier delay' : 'Synthetic weather disruption',
+          daysDelayed: 5 + index,
+          impact: 'Demonstration outcome for schedule-delay model training.',
+          correctiveAction: 'Historical record; no operational action required.',
+          critical: index >= 7,
+          status: 'RESOLVED',
+        },
+      });
+    const sourceRef = `ML-COST-${String(sequence).padStart(2, '0')}`;
+    const expenseData = {
+      organizationId: organization.id,
+      projectId: project.id,
+      category: 'Historical settled cost',
+      description: 'Synthetic final cost outcome for cost-at-completion model training.',
+      amount: (budget * costOutcomeRatios[index]!).toFixed(2),
+      currency: 'INR',
+      expenseDate: endDate,
+      sourceRef,
+      status: 'PAID' as const,
+      createdById: manager.id,
+      approvedById: manager.id,
+      notes: 'DEMO_ML_TRAINING_DATA: replace with audited settled costs before operational use.',
+    };
+    await db.expense.upsert({
+      where: { organizationId_sourceRef: { organizationId: organization.id, sourceRef } },
+      update: expenseData,
+      create: { id: trainingId(50, sequence), ...expenseData },
+    });
   }
   if ((await db.equipment.count({ where: { organizationId: organization.id } })) === 0) {
     await db.equipment.createMany({
@@ -416,6 +523,36 @@ async function seed() {
       ],
     });
   }
+  const materialDemandHistory: Record<string, number[]> = {
+    'CEM-OPC-43': [95, 110, 102, 120, 128, 134, 129, 142, 150, 147, 158, 165],
+    'STL-TMT-12': [0.8, 1.1, 0.9, 1.3, 1.2, 1.5, 1.4, 1.6, 1.8, 1.7, 1.9, 2.1],
+    'BRK-RED-01': [1800, 2100, 1950, 2400, 2600, 2500, 2800, 3000, 3200, 3100, 3400, 3600],
+  };
+  const demandMaterials = await db.material.findMany({
+    where: { organizationId: organization.id, sku: { in: Object.keys(materialDemandHistory) } },
+  });
+  for (let materialIndex = 0; materialIndex < demandMaterials.length; materialIndex += 1) {
+    const material = demandMaterials[materialIndex]!;
+    const weeklyDemand = materialDemandHistory[material.sku]!;
+    for (let week = 0; week < weeklyDemand.length; week += 1) {
+      const demand = weeklyDemand[week]!;
+      const movementData = {
+        materialId: material.id,
+        type: 'ISSUE' as const,
+        stockDelta: (-demand).toString(),
+        allocatedDelta: '0',
+        balanceAfter: material.currentStock,
+        allocatedAfter: material.allocatedStock,
+        note: 'Synthetic weekly usage observation for material-demand forecasting.',
+        createdAt: new Date(Date.UTC(2026, 5, 29 + week * 7, 9)),
+      };
+      await db.stockMovement.upsert({
+        where: { id: trainingId(52 + materialIndex, week + 1) },
+        update: movementData,
+        create: { id: trainingId(52 + materialIndex, week + 1), ...movementData },
+      });
+    }
+  }
   if ((await db.workerProfile.count({ where: { organizationId: organization.id } })) === 0) {
     const workerAccount = team.find((user) => user.role === 'WORKER')!;
     const project = await db.project.findFirstOrThrow({
@@ -479,7 +616,7 @@ async function seed() {
     });
   }
   console.log(
-    'Seed complete: accounts, projects, schedule/site, equipment with maintenance training history, inventory, workforce and vendor records. Existing records were not overwritten.',
+    'Seed complete: accounts, operational demos, 12 schedule outcomes, 12 settled project costs, 36 weekly material-demand observations, 14 maintenance outcomes, workforce and vendors. Existing records were not overwritten.',
   );
 }
 seed()

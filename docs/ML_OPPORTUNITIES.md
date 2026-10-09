@@ -4,13 +4,26 @@ BuildTrack already captures structured project, schedule, site, equipment, inven
 
 ## Implemented models
 
-The development seed includes 14 completed equipment-maintenance outcomes: seven failure-related repairs and seven preventive services. These demonstration records make the maintenance classifier immediately trainable. New outcomes entered and completed through the Equipment page automatically become part of subsequent organization-scoped training runs.
+The development seed makes all four models immediately demonstrable. It includes 12 completed schedule outcomes, 12 financially settled closed projects, 12 weekly demand observations for each of three materials, and 14 completed equipment-maintenance outcomes. The records are labelled `DEMO_ML_TRAINING_DATA` or described as synthetic so they can be identified and replaced with verified organization data later. New records entered through the normal product pages automatically become part of subsequent organization-scoped training runs.
 
 - **Schedule delay v1:** trains in memory from completed schedule items visible to the signed-in user. It requires at least 12 completed items with at least three late and three on-time outcomes. Features include planned duration, dependency presence, work-item type, project priority and recorded delays. The page shows an in-sample Brier diagnostic and explicitly requires holdout validation before operational reliance.
 - **Material demand v1:** aggregates outbound stock movements into weekly demand, applies exponential smoothing with `alpha = 0.45`, and reports expected weekly demand and weeks of available stock cover. It requires at least two observed demand weeks per material.
 - **Cost at completion v1:** trains ridge regression from financially settled closed projects. Features include estimate-to-budget ratio, planned duration and priority. It requires 10 closed projects with varied cost outcomes, compares its estimate with the deterministic actual-plus-commitment forecast, and never reports less than already incurred or committed cost.
 - **Equipment maintenance v1:** trains logistic regression from completed maintenance outcomes. Features include service-interval overrun, recent allocation intensity, asset age and open high-priority maintenance. It requires 12 outcomes with at least three failure-related and three preventive records. Until then, every asset still receives an explainable service-interval due date without a fabricated failure probability.
-- Both implementations are read-only decision support. They do not approve, reject or modify any record.
+- All four implementations are read-only decision support. They do not approve, reject or modify any record.
+
+## Demo dataset and expected outcomes
+
+Run `npm run db:seed` in development, sign in as `admin@buildtrack.local`, and open `/ml-insights`.
+
+| Product decision | Why ML is used | Implemented algorithm | Seed evidence | Result shown |
+| ---------------- | -------------- | --------------------- | ------------- | ------------ |
+| Schedule planning | Learn combinations associated with late completion instead of relying on one fixed overdue rule | L2-regularized binary logistic regression trained with gradient descent | 12 completed items: six late and six on time | Delay probability, risk band and contributing features for open items |
+| Inventory planning | Recent material usage should influence the next requirement more than older usage | Single exponential smoothing with `alpha = 0.45` | 12 weekly outbound observations for each of cement, steel and bricks | Expected weekly demand, stock cover and projected stock-out date |
+| Cost control | Estimate the final cost ratio from patterns across settled projects while limiting unstable coefficients | Ridge regression trained with gradient descent | 12 closed projects with varied budgets, estimates, durations, priorities and final costs | Model estimate, expected completion cost and variance from budget |
+| Equipment maintenance | Learn which service-overrun, utilization, age and priority patterns are associated with failures | L2-regularized binary logistic regression trained with gradient descent | 14 completed outcomes: seven failures and seven preventive services | Failure probability, risk band, next service date and reasons |
+
+These records are demonstration data, not evidence that a model is production-ready. The diagnostics on the page are in-sample checks. Replace the synthetic records with your own historical outcomes and evaluate on a time-based holdout set before relying on predictions operationally.
 
 ## Recommended order
 
