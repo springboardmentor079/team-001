@@ -145,7 +145,8 @@ function allocationDays(
 
 mlRouter.get('/', async (req, res) => {
   const actor = req.identity!;
-  const scope = projectScope(actor);
+  // ML sees historical training records that stay hidden from operational screens.
+  const scope = projectScope(actor, true);
   const workItems = await db.workItem.findMany({
     where: { project: scope },
     include: {

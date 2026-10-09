@@ -5,9 +5,11 @@ import { rolePermissions } from '../../shared/permissions';
 
 export function projectScope(
   user: Pick<Identity, 'id' | 'organizationId' | 'role'>,
+  includeTrainingData = false,
 ): Prisma.ProjectWhereInput {
   return {
     organizationId: user.organizationId,
+    ...(includeTrainingData ? {} : { trainingData: false }),
     ...(user.role === 'ADMINISTRATOR' ? {} : { members: { some: { userId: user.id } } }),
   };
 }

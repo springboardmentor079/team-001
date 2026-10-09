@@ -60,7 +60,7 @@ analyticsRouter.get('/', async (req, res) => {
       forecast: records.reduce((sum, row) => sum.plus(row.forecast), new Prisma.Decimal(0)),
     },
     methodology: {
-      progress: 'Equal-weight milestones; tasks are used only when a project has no milestones.',
+      progress: 'Current progress is calculated from saved milestone percentages and their weights; tasks are used only when a project has no milestones. ML predicts delay risk separately and does not overwrite recorded completion.',
       risk: '12 points per overdue item, 25 per critical delay, 20 per unresolved failed/conditional inspection, and 20 when forecast reaches 90% of budget; capped at 100.',
       finance: 'Actual = approved/paid expenses + paid invoices. Outstanding commitment = non-cancelled PO total − paid invoices. Forecast = actual + outstanding commitment.',
     },

@@ -160,7 +160,8 @@
   </nav>
   <div class="project-stat-strip compact">
     <div>
-      <strong>{{ p.schedule.progress }}%</strong><span>Schedule progress</span>
+      <strong>{{ p.schedule.progress }}%</strong
+      ><span>Schedule progress · {{ p.schedule.basis }}</span>
     </div>
     <div>
       <strong>{{ p.schedule.completed }}/{{ p.schedule.total }}</strong

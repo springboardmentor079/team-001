@@ -52,6 +52,7 @@ const include = {
 function scope(user: Identity): Prisma.ProjectWhereInput {
   return {
     organizationId: user.organizationId,
+    trainingData: false,
     ...(user.role === 'ADMINISTRATOR' ? {} : { members: { some: { userId: user.id } } }),
   };
 }

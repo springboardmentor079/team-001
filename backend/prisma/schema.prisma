@@ -162,6 +162,7 @@ model Project {
   budget               Decimal                   @db.Decimal(16, 2)
   estimatedCost        Decimal                   @db.Decimal(16, 2)
   notes                String                    @default("") @db.VarChar(5000)
+  trainingData         Boolean                   @default(false)
   createdAt            DateTime                  @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime                  @updatedAt @db.Timestamptz(3)
   members              ProjectMember[]

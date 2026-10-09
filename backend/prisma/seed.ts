@@ -164,6 +164,75 @@ async function seed() {
         },
       });
     }
+    if (
+      example.code === 'BT-DEMO-002' &&
+      (await db.workItem.count({ where: { projectId: project.id } })) === 0
+    ) {
+      const manager = team.find((user) => user.role === 'PROJECT_MANAGER')!;
+      await db.workItem.createMany({
+        data: [
+          {
+            projectId: project.id,
+            kind: 'MILESTONE',
+            name: 'Design coordination',
+            description: 'Coordinate architectural, structural and services design.',
+            startDate: new Date('2026-09-01'),
+            plannedDate: new Date('2026-11-15'),
+            status: 'IN_PROGRESS',
+            progress: 20,
+            weight: '1.5',
+            responsibleId: manager.id,
+          },
+          {
+            projectId: project.id,
+            kind: 'MILESTONE',
+            name: 'Mobilization',
+            description: 'Prepare the site and mobilize the delivery team.',
+            startDate: new Date('2026-10-01'),
+            plannedDate: new Date('2026-12-01'),
+            status: 'IN_PROGRESS',
+            progress: 10,
+            weight: '1',
+            responsibleId: manager.id,
+          },
+        ],
+      });
+    }
+    if (
+      example.code === 'BT-DEMO-003' &&
+      (await db.workItem.count({ where: { projectId: project.id } })) === 0
+    ) {
+      const engineer = team.find((user) => user.role === 'SITE_ENGINEER')!;
+      await db.workItem.createMany({
+        data: [
+          {
+            projectId: project.id,
+            kind: 'MILESTONE',
+            name: 'Earthworks',
+            description: 'Complete grading and subgrade preparation.',
+            startDate: new Date('2026-09-01'),
+            plannedDate: new Date('2026-10-05'),
+            actualDate: new Date('2026-10-04'),
+            status: 'COMPLETED',
+            progress: 100,
+            weight: '1',
+            responsibleId: engineer.id,
+          },
+          {
+            projectId: project.id,
+            kind: 'MILESTONE',
+            name: 'Drainage installation',
+            description: 'Install cross drainage and roadside channels.',
+            startDate: new Date('2026-10-05'),
+            plannedDate: new Date('2026-12-20'),
+            status: 'IN_PROGRESS',
+            progress: 30,
+            weight: '2',
+            responsibleId: engineer.id,
+          },
+        ],
+      });
+    }
   }
   const manager = team.find((user) => user.role === 'PROJECT_MANAGER')!;
   const costOutcomeRatios = [0.68, 0.74, 0.79, 0.83, 0.88, 0.93, 0.97, 1.02, 1.08, 1.14, 0.86, 1.2];
@@ -176,14 +245,16 @@ async function seed() {
     const endDate = daysAfter(startDate, 180 + index * 18);
     const project = await db.project.upsert({
       where: { organizationId_code: { organizationId: organization.id, code } },
-      update: {},
+      update: { trainingData: true },
       create: {
         id: trainingId(48, sequence),
         organizationId: organization.id,
         code,
         name: `ML historical project ${String(sequence).padStart(2, '0')}`,
-        description: 'Synthetic closed-project outcome used only to demonstrate organization-scoped ML training.',
-        category: index % 3 === 0 ? 'Infrastructure' : index % 2 === 0 ? 'Commercial' : 'Residential',
+        description:
+          'Synthetic closed-project outcome used only to demonstrate organization-scoped ML training.',
+        category:
+          index % 3 === 0 ? 'Infrastructure' : index % 2 === 0 ? 'Commercial' : 'Residential',
         address: 'Historical demonstration site',
         city: index % 2 === 0 ? 'Pune' : 'Bengaluru',
         state: index % 2 === 0 ? 'Maharashtra' : 'Karnataka',
@@ -195,6 +266,7 @@ async function seed() {
         budget: budget.toFixed(2),
         estimatedCost: (budget * estimateRatios[index]!).toFixed(2),
         notes: 'DEMO_ML_TRAINING_DATA: safe to replace with verified historical project outcomes.',
+        trainingData: true,
       },
     });
     await db.projectMember.createMany({
@@ -309,6 +381,41 @@ async function seed() {
       where: { id: crane.id },
       data: { commissionedAt: new Date('2024-10-01'), serviceIntervalDays: 90 },
     });
+  const allocationProject = await db.project.findFirstOrThrow({
+    where: { organizationId: organization.id, code: 'BT-DEMO-001' },
+  });
+  const allocationWeek = new Date();
+  allocationWeek.setUTCHours(8, 0, 0, 0);
+  allocationWeek.setUTCDate(
+    allocationWeek.getUTCDate() - ((allocationWeek.getUTCDay() + 6) % 7) - 11 * 7,
+  );
+  for (const [assetIndex, asset] of [excavator, crane].entries()) {
+    if (!asset) continue;
+    for (let week = 0; week < 12; week += 1) {
+      const startAt = new Date(allocationWeek.getTime() + week * 7 * dayMs);
+      const allocatedDays = 2 + ((week + assetIndex * 2) % 4);
+      const endAt = daysAfter(startAt, allocatedDays);
+      await db.equipmentAllocation.upsert({
+        where: { id: trainingId(64 + assetIndex, week + 1) },
+        update: {
+          equipmentId: asset.id,
+          projectId: allocationProject.id,
+          startAt,
+          endAt,
+          releasedAt: endAt,
+        },
+        create: {
+          id: trainingId(64 + assetIndex, week + 1),
+          equipmentId: asset.id,
+          projectId: allocationProject.id,
+          startAt,
+          endAt,
+          releasedAt: endAt,
+          notes: 'Synthetic historical allocation used to demonstrate fleet utilization trends.',
+        },
+      });
+    }
+  }
   const maintenanceExamples = [
     [
       '21000000-0000-4000-8000-000000000001',
