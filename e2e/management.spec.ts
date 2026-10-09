@@ -296,8 +296,15 @@ test('workforce assignment, attendance, shift and payroll estimate persist', asy
   await page.getByRole('button', { name: 'Schedule shift' }).click();
   await page.getByLabel('Worker').selectOption(worker.id);
   await page.getByLabel('Project').selectOption(project.id);
-  await page.getByLabel('Shift starts').fill('2026-10-01T09:00');
-  await page.getByLabel('Shift ends').fill('2026-10-01T17:00');
+  const shiftDate = new Date();
+  shiftDate.setDate(shiftDate.getDate() + 1);
+  const shiftDay = [
+    shiftDate.getFullYear(),
+    String(shiftDate.getMonth() + 1).padStart(2, '0'),
+    String(shiftDate.getDate()).padStart(2, '0'),
+  ].join('-');
+  await page.getByLabel('Shift starts').fill(`${shiftDay}T09:00`);
+  await page.getByLabel('Shift ends').fill(`${shiftDay}T17:00`);
   await page.getByLabel('Location').fill('Tower A');
   await page.locator('form').getByRole('button', { name: 'Schedule shift', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Shift scheduled.');

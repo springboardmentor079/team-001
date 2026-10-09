@@ -17,7 +17,12 @@ if (Test-Path -LiteralPath $pgData) {
 }
 New-Item -ItemType Directory -Force -Path $localDir | Out-Null
 function Test-ServiceUrl([string]$url) {
-    try { $response = Invoke-WebRequest -Uri $url -TimeoutSec 10; return $response.StatusCode -eq 200 } catch { return $false }
+    try {
+        # Windows PowerShell 5 otherwise attempts to use the retired Internet
+        # Explorer HTML parser and reports healthy services as unavailable.
+        $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 10
+        return $response.StatusCode -eq 200
+    } catch { return $false }
 }
 if (!(Test-ServiceUrl 'http://127.0.0.1:4300/api/ready')) {
     $api = Start-Process -FilePath $nodeExe -ArgumentList 'dist/src/server.js' -WorkingDirectory (Join-Path $projectRoot 'backend') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $localDir 'api.log') -RedirectStandardError (Join-Path $localDir 'api-error.log')
