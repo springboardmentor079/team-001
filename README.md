@@ -6,7 +6,7 @@ Construction project management and site monitoring, built incrementally with An
 
 Implemented and connected to PostgreSQL: registration, login, refresh/logout, password reset, forced first-login password changes, profile updates, six seeded roles, server-side permission checking, organization-isolated team administration (invitation delivery, create, edit, role assignment, activation/deactivation, reset delivery, pagination and last login), account overview, audit activity, responsive navigation, global search, loading/error states and API documentation.
 
-Project records support create/edit, explicit team assignment, server-side pagination/sorting, details, search/status filters, budget/estimate amounts and validated closure. Dependency-aware weighted schedules retain original baselines, daily reports accept verified attachments, equipment shows 12 weeks of time-based utilization, and document records support preview and deletion. Inventory, workforce, procurement, finance, notifications, exports and cross-module analytics are persisted and permission-scoped. Payroll is labeled as an approved-hours estimate; weather is labeled as demo data and camera feeds remain visibly unconfigured. Demonstration records are added idempotently by the development seed.
+Project records support create/edit, explicit team assignment, server-side pagination/sorting, details, search/status filters, budget/estimate amounts and validated closure. Dependency-aware weighted schedules retain original baselines, daily reports accept verified attachments, equipment shows 12 weeks of time-based utilization, and document records support preview and deletion. Inventory, workforce, procurement, finance, notifications, exports and cross-module analytics are persisted and permission-scoped. Payroll is labeled as an approved-hours estimate; weather is labeled as demo data and camera feeds remain visibly unconfigured. Demonstration records are added idempotently by the development seed, including approved expenses, category allocations and purchase commitments for every operational demo project so the finance dashboard opens with meaningful actual and forecast values.
 
 ML Insights adds organization-scoped models for schedule-delay probability, material demand, cost at completion and equipment failure risk. The development seed supplies 12 completed schedule outcomes, 12 settled project-cost outcomes, 12 weekly observations for each of three materials and 14 maintenance outcomes, so every model has an immediately visible demonstration. Models expose their sample requirements, readiness and diagnostic limitations. Insufficient history returns no prediction, and predictions never change operational records automatically. Replace labelled synthetic outcomes with verified organization history before operational use.
 
@@ -121,7 +121,7 @@ Database tables currently migrated: **organizations, users, auth_sessions, refre
 | POST        | /api/v1/auth/forgot-password, /reset-password, /change-password |
 | GET / PATCH | /api/v1/auth/me                                                 |
 | GET         | /api/v1/account/overview                                        |
-| GET         | /api/v1/search                                                   |
+| GET         | /api/v1/search                                                  |
 | GET / POST  | /api/v1/users (organization administrator only)                 |
 | PATCH       | /api/v1/users/:id                                               |
 | POST        | /api/v1/users/:id/reset-password                                |
@@ -139,15 +139,15 @@ Database tables currently migrated: **organizations, users, auth_sessions, refre
 | GET / POST  | /api/v1/inventory, /inventory/materials, /inventory/requests    |
 | POST/PATCH  | /api/v1/inventory/materials/:id/adjust, /requests/:id/status    |
 | GET         | /api/v1/workforce                                               |
-| POST/PATCH  | /api/v1/workforce/workers, /assignments, /attendance, /shifts  |
-| GET / POST  | /api/v1/procurement, /vendors, /requests, /orders, /invoices   |
+| POST/PATCH  | /api/v1/workforce/workers, /assignments, /attendance, /shifts   |
+| GET / POST  | /api/v1/procurement, /vendors, /requests, /orders, /invoices    |
 | POST/PATCH  | /api/v1/procurement/orders/:id/receipts, invoice/request status |
 | GET / POST  | /api/v1/finance, /finance/budgets, /finance/expenses            |
 | GET / POST  | /api/v1/documents, /notifications                               |
-| GET/DELETE  | /api/v1/documents/versions/:id/preview, /documents/:id           |
-| GET         | /api/v1/reports/*.pdf, /reports/*.xlsx, /analytics              |
+| GET/DELETE  | /api/v1/documents/versions/:id/preview, /documents/:id          |
+| GET         | /api/v1/reports/_.pdf, /reports/_.xlsx, /analytics              |
 | POST        | /api/v1/assistant/public, /assistant/message                    |
-| GET         | /api/v1/ml                                                    |
+| GET         | /api/v1/ml                                                      |
 
 Abbreviated auth entries share `/api/v1/auth`. Interactive endpoint definitions are at `/api/docs`.
 

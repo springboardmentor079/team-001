@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient, Role } from '@prisma/client';
+import { Prisma, PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 const db = new PrismaClient();
 const dayMs = 86_400_000;
@@ -722,8 +722,202 @@ async function seed() {
       ],
     });
   }
+
+  const demoProjects = await db.project.findMany({
+    where: {
+      organizationId: organization.id,
+      code: { in: examples.map((example) => example.code) },
+    },
+  });
+  const financeAllocations: Record<string, [string, string][]> = {
+    'BT-DEMO-001': [
+      ['Civil works', '30000000'],
+      ['Structural steel', '14000000'],
+      ['MEP services', '12000000'],
+    ],
+    'BT-DEMO-002': [
+      ['Design and consultants', '10000000'],
+      ['Site mobilization', '8000000'],
+      ['Construction materials', '42000000'],
+    ],
+    'BT-DEMO-003': [
+      ['Earthworks', '9000000'],
+      ['Drainage', '7500000'],
+      ['Road paving', '15000000'],
+    ],
+  };
+  for (const project of demoProjects) {
+    for (const [category, amount] of financeAllocations[project.code] || []) {
+      await db.budgetAllocation.upsert({
+        where: { projectId_category: { projectId: project.id, category } },
+        update: {},
+        create: {
+          projectId: project.id,
+          category,
+          amount,
+          notes: 'Seeded category allocation for the cost-control demonstration.',
+        },
+      });
+    }
+  }
+
+  const financeExpenses = [
+    {
+      id: trainingId(70, 1),
+      code: 'BT-DEMO-001',
+      category: 'Site preparation',
+      description: 'Excavation, dewatering and temporary works',
+      amount: '4850000',
+      expenseDate: new Date('2026-09-18'),
+      sourceRef: 'BT-DEMO-001-EXP-001',
+      status: 'APPROVED' as const,
+    },
+    {
+      id: trainingId(70, 2),
+      code: 'BT-DEMO-001',
+      category: 'Labour',
+      description: 'September certified labour bill',
+      amount: '1250000',
+      expenseDate: new Date('2026-09-30'),
+      sourceRef: 'BT-DEMO-001-EXP-002',
+      status: 'PAID' as const,
+    },
+    {
+      id: trainingId(70, 3),
+      code: 'BT-DEMO-002',
+      category: 'Design and consultants',
+      description: 'Architectural and structural design package',
+      amount: '2800000',
+      expenseDate: new Date('2026-09-22'),
+      sourceRef: 'BT-DEMO-002-EXP-001',
+      status: 'APPROVED' as const,
+    },
+    {
+      id: trainingId(70, 4),
+      code: 'BT-DEMO-003',
+      category: 'Earthworks',
+      description: 'Completed grading and subgrade preparation',
+      amount: '1650000',
+      expenseDate: new Date('2026-10-04'),
+      sourceRef: 'BT-DEMO-003-EXP-001',
+      status: 'APPROVED' as const,
+    },
+  ];
+  for (const expense of financeExpenses) {
+    const project = demoProjects.find((row) => row.code === expense.code)!;
+    const expenseData = {
+      organizationId: organization.id,
+      projectId: project.id,
+      category: expense.category,
+      description: expense.description,
+      amount: expense.amount,
+      currency: organization.currency,
+      expenseDate: expense.expenseDate,
+      sourceRef: expense.sourceRef,
+      status: expense.status,
+      createdById: manager.id,
+      approvedById: manager.id,
+      notes: 'Seeded approved cost for the finance dashboard demonstration.',
+    };
+    await db.expense.upsert({
+      where: { id: expense.id },
+      update: {},
+      create: { id: expense.id, ...expenseData },
+    });
+  }
+
+  const financeOrders = [
+    {
+      code: 'BT-DEMO-001',
+      materialSku: 'CEM-OPC-43',
+      vendorCode: 'VEN-DECCAN',
+      number: 'PO-DEMO-001',
+      quantity: '20000',
+      unitPrice: '420',
+      expectedDate: new Date('2026-11-15'),
+    },
+    {
+      code: 'BT-DEMO-002',
+      materialSku: 'STL-TMT-12',
+      vendorCode: 'VEN-METRO',
+      number: 'PO-DEMO-002',
+      quantity: '200',
+      unitPrice: '63750',
+      expectedDate: new Date('2026-12-05'),
+    },
+    {
+      code: 'BT-DEMO-003',
+      materialSku: 'BRK-RED-01',
+      vendorCode: 'VEN-DECCAN',
+      number: 'PO-DEMO-003',
+      quantity: '500000',
+      unitPrice: '8.40',
+      expectedDate: new Date('2026-11-28'),
+    },
+  ];
+  const financeMaterials = await db.material.findMany({
+    where: {
+      organizationId: organization.id,
+      sku: { in: financeOrders.map((row) => row.materialSku) },
+    },
+  });
+  const financeVendors = await db.vendor.findMany({
+    where: {
+      organizationId: organization.id,
+      code: { in: financeOrders.map((row) => row.vendorCode) },
+    },
+  });
+  for (let index = 0; index < financeOrders.length; index += 1) {
+    const input = financeOrders[index]!;
+    const project = demoProjects.find((row) => row.code === input.code)!;
+    const material = financeMaterials.find((row) => row.sku === input.materialSku)!;
+    const vendor = financeVendors.find((row) => row.code === input.vendorCode)!;
+    const quantity = new Prisma.Decimal(input.quantity);
+    const unitPrice = new Prisma.Decimal(input.unitPrice);
+    const subtotal = quantity.mul(unitPrice).toDecimalPlaces(2);
+    const requestId = trainingId(71, index + 1);
+    const orderId = trainingId(72, index + 1);
+    await db.procurementRequest.upsert({
+      where: { id: requestId },
+      update: {},
+      create: {
+        id: requestId,
+        projectId: project.id,
+        materialId: material.id,
+        requesterId: manager.id,
+        approvedById: manager.id,
+        quantity,
+        requiredDate: input.expectedDate,
+        justification: 'Approved material requirement for the finance commitment demonstration.',
+        status: 'ORDERED',
+        decisionNote: 'Seeded and approved for demonstration.',
+      },
+    });
+    await db.purchaseOrder.upsert({
+      where: { id: orderId },
+      update: {},
+      create: {
+        id: orderId,
+        organizationId: organization.id,
+        number: input.number,
+        requestId,
+        vendorId: vendor.id,
+        materialId: material.id,
+        quantity,
+        unitPrice,
+        taxRate: 0,
+        subtotal,
+        taxAmount: 0,
+        total: subtotal,
+        expectedDate: input.expectedDate,
+        status: 'ISSUED',
+        createdById: manager.id,
+        notes: 'Seeded purchase commitment for the cost-control demonstration.',
+      },
+    });
+  }
   console.log(
-    'Seed complete: accounts, operational demos, 12 schedule outcomes, 12 settled project costs, 36 weekly material-demand observations, 14 maintenance outcomes, workforce and vendors. Existing records were not overwritten.',
+    'Seed complete: accounts, operational demos, finance actuals and commitments, 12 schedule outcomes, 12 settled project costs, 36 weekly material-demand observations, 14 maintenance outcomes, workforce and vendors. Existing records were not overwritten.',
   );
 }
 seed()
