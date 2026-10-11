@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { ApiResponse, errorMessage, roleLabel } from '../../core/models';
@@ -44,7 +44,7 @@ interface Project {
 }
 @Component({
   selector: 'bt-inventory',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, CurrencyPipe, DatePipe],
   templateUrl: './inventory.component.html',
 })
 export class InventoryComponent {
@@ -59,6 +59,35 @@ export class InventoryComponent {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly message = signal('');
+  readonly searchTerm = signal('');
+  readonly stockFilter = signal('');
+  readonly sortBy = signal<'name' | 'category' | 'available'>('name');
+  readonly page = signal(1);
+  readonly pageSize = 8;
+  readonly filteredMaterials = computed(() => {
+    const query = this.searchTerm().trim().toLowerCase();
+    return [...(this.data()?.materials || [])]
+      .filter(
+        (material) =>
+          (!this.stockFilter() || material.stockStatus === this.stockFilter()) &&
+          (!query ||
+            [material.name, material.sku, material.category, material.supplier].some((value) =>
+              value.toLowerCase().includes(query),
+            )),
+      )
+      .sort((a, b) => {
+        const sort = this.sortBy();
+        if (sort === 'available')
+          return +b.currentStock - +b.allocatedStock - (+a.currentStock - +a.allocatedStock);
+        return a[sort].localeCompare(b[sort]);
+      });
+  });
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredMaterials().length / this.pageSize)),
+  );
+  readonly pagedMaterials = computed(() =>
+    this.filteredMaterials().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize),
+  );
   readonly materialForm = this.fb.nonNullable.group({
     sku: ['', Validators.required],
     name: ['', Validators.required],
@@ -88,13 +117,17 @@ export class InventoryComponent {
   can(p: string) {
     return !!this.auth.user()?.permissions.includes(p);
   }
+  filter(value: string, kind: 'search' | 'status' | 'sort') {
+    if (kind === 'search') this.searchTerm.set(value);
+    if (kind === 'status') this.stockFilter.set(value);
+    if (kind === 'sort') this.sortBy.set(value as 'name' | 'category' | 'available');
+    this.page.set(1);
+  }
   load() {
-    this.http
-      .get<ApiResponse<Inventory>>('/api/v1/inventory')
-      .subscribe({
-        next: (r) => this.data.set(r.data),
-        error: (e) => this.error.set(errorMessage(e)),
-      });
+    this.http.get<ApiResponse<Inventory>>('/api/v1/inventory').subscribe({
+      next: (r) => this.data.set(r.data),
+      error: (e) => this.error.set(errorMessage(e)),
+    });
     if (this.can('MATERIAL_REQUEST_CREATE'))
       this.http
         .get<ApiResponse<Project[]>>('/api/v1/projects')

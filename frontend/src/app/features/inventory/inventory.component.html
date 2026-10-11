@@ -141,6 +141,40 @@
   </section>
 }
 <section class="panel">
+  <div class="resource-toolbar inventory-toolbar">
+    <div class="field">
+      <label for="inventory-search">Find inventory</label
+      ><input
+        id="inventory-search"
+        placeholder="Name, SKU, category or supplier"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="filter($event, 'search')"
+      />
+    </div>
+    <div class="field">
+      <label for="inventory-status">Stock status</label
+      ><select
+        id="inventory-status"
+        [ngModel]="stockFilter()"
+        (ngModelChange)="filter($event, 'status')"
+      >
+        <option value="">All statuses</option>
+        <option value="HEALTHY">Healthy</option>
+        <option value="LOW">Low</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="OUT">Out of stock</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="inventory-sort">Sort by</label
+      ><select id="inventory-sort" [ngModel]="sortBy()" (ngModelChange)="filter($event, 'sort')">
+        <option value="name">Material name</option>
+        <option value="category">Category</option>
+        <option value="available">Available quantity</option>
+      </select>
+    </div>
+    <span>{{ filteredMaterials().length }} materials</span>
+  </div>
   <div class="table-scroll">
     <table>
       <thead>
@@ -157,7 +191,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (m of data()?.materials || []; track m.id) {
+        @for (m of pagedMaterials(); track m.id) {
           <tr>
             <td>
               <strong>{{ m.name }}</strong
@@ -168,9 +202,13 @@
             <td>{{ m.allocatedStock }} {{ m.unit }}</td>
             <td>{{ m.minimumLevel }}</td>
             <td>
-              <span class="tag" [class.green-tag]="m.stockStatus === 'HEALTHY'">{{
-                label(m.stockStatus)
-              }}</span>
+              <span
+                class="tag"
+                [class.green-tag]="m.stockStatus === 'HEALTHY'"
+                [class.orange-tag]="m.stockStatus === 'LOW'"
+                [class.critical-tag]="m.stockStatus === 'CRITICAL' || m.stockStatus === 'OUT'"
+                >{{ label(m.stockStatus) }}</span
+              >
             </td>
             <td>{{ m.supplier || '—' }}</td>
             <td>{{ m.unitCost | currency: auth.user()?.organization?.currency }}</td>
@@ -188,6 +226,15 @@
       </tbody>
     </table>
   </div>
+  @if (totalPages() > 1) {
+    <div class="pagination">
+      <button class="btn" [disabled]="page() === 1" (click)="page.set(page() - 1)">Previous</button
+      ><span>Page {{ page() }} of {{ totalPages() }}</span
+      ><button class="btn" [disabled]="page() === totalPages()" (click)="page.set(page() + 1)">
+        Next
+      </button>
+    </div>
+  }
 </section>
 <section class="panel project-info">
   <h2>Material requests</h2>

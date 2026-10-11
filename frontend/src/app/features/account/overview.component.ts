@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -17,6 +17,23 @@ export class OverviewComponent {
   readonly error = signal('');
   readonly loading = signal(true);
   readonly label = roleLabel;
+  readonly animated = signal({
+    activeProjects: 0,
+    activeWorkforce: 0,
+    budgetUtilization: 0,
+    healthyProjects: 0,
+  });
+  readonly animatedProgress = signal<Record<string, number>>({});
+  readonly featuredProject = computed(() => {
+    const projects = this.data()?.operations.projects || [];
+    return projects.find((project) => project.status === 'ACTIVE') || projects[0] || null;
+  });
+  readonly atRiskProjects = computed(() =>
+    [...(this.data()?.operations.projects || [])]
+      .filter((project) => project.riskScore >= 20 || project.overdue > 0)
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 4),
+  );
   constructor() {
     this.load();
   }
@@ -27,6 +44,7 @@ export class OverviewComponent {
       next: (r) => {
         this.data.set(r.data);
         this.loading.set(false);
+        this.animateOperations(r.data);
       },
       error: (e) => {
         this.error.set(errorMessage(e));
@@ -62,8 +80,52 @@ export class OverviewComponent {
           DELAY_UPDATED: 'Updated a project delay',
           INSPECTION_RECORDED: 'Recorded a site inspection',
           INSPECTION_UPDATED: 'Updated a site inspection',
+          EQUIPMENT_ALLOCATED: 'Allocated equipment to the project',
+          EQUIPMENT_RELEASED: 'Released equipment from the project',
+          PROCUREMENT_REQUEST_CREATED: 'Submitted a procurement request',
+          PROCUREMENT_REQUEST_APPROVED: 'Approved a procurement request',
+          PURCHASE_ORDER_CREATED: 'Issued a purchase order',
+          GOODS_RECEIVED: 'Recorded a material delivery',
+          BUDGET_ALLOCATED: 'Allocated a project budget category',
+          EXPENSE_CREATED: 'Submitted a project expense',
+          EXPENSE_APPROVED: 'Approved a project expense',
         } as Record<string, string>
       )[action] || action
     );
+  }
+  private animateOperations(summary: AccountOverview) {
+    const targets = {
+      activeProjects: summary.operations.summary.activeProjects,
+      activeWorkforce: summary.operations.summary.activeWorkforce || 0,
+      budgetUtilization: Number(summary.operations.summary.budgetUtilization || 0),
+      healthyProjects: summary.operations.summary.healthyProjects,
+    };
+    const progressTargets = Object.fromEntries(
+      summary.operations.projects.map((project) => [project.id, project.progress]),
+    );
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.animated.set(targets);
+      this.animatedProgress.set(progressTargets);
+      return;
+    }
+    const start = performance.now();
+    const duration = 760;
+    const frame = (now: number) => {
+      const linear = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - linear, 3);
+      this.animated.set({
+        activeProjects: Math.round(targets.activeProjects * eased),
+        activeWorkforce: Math.round(targets.activeWorkforce * eased),
+        budgetUtilization: Number((targets.budgetUtilization * eased).toFixed(1)),
+        healthyProjects: Math.round(targets.healthyProjects * eased),
+      });
+      this.animatedProgress.set(
+        Object.fromEntries(
+          Object.entries(progressTargets).map(([id, value]) => [id, Math.round(value * eased)]),
+        ),
+      );
+      if (linear < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   }
 }

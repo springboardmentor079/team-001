@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { ApiResponse, errorMessage, roleLabel } from '../../core/models';
@@ -62,7 +62,7 @@ interface Project {
 }
 @Component({
   selector: 'bt-equipment',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, CurrencyPipe, DatePipe],
   templateUrl: './equipment.component.html',
 })
 export class EquipmentComponent {
@@ -77,6 +77,27 @@ export class EquipmentComponent {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly message = signal('');
+  readonly searchTerm = signal('');
+  readonly statusFilter = signal('');
+  readonly page = signal(1);
+  readonly pageSize = 8;
+  readonly filteredRecords = computed(() => {
+    const query = this.searchTerm().trim().toLowerCase();
+    return (this.data()?.records || []).filter(
+      (item) =>
+        (!this.statusFilter() || item.status === this.statusFilter()) &&
+        (!query ||
+          [item.name, item.code, item.type, item.location].some((value) =>
+            value.toLowerCase().includes(query),
+          )),
+    );
+  });
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredRecords().length / this.pageSize)),
+  );
+  readonly pagedRecords = computed(() =>
+    this.filteredRecords().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize),
+  );
   readonly equipmentForm = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9-]+$/)]],
     name: ['', Validators.required],
@@ -107,6 +128,14 @@ export class EquipmentComponent {
   }
   can(p: string) {
     return !!this.auth.user()?.permissions.includes(p);
+  }
+  filterSearch(value: string) {
+    this.searchTerm.set(value);
+    this.page.set(1);
+  }
+  filterStatus(value: string) {
+    this.statusFilter.set(value);
+    this.page.set(1);
   }
   load() {
     this.http.get<ApiResponse<Result>>('/api/v1/equipment').subscribe({

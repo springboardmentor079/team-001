@@ -286,9 +286,23 @@
         </div>
         <h2>{{ p.name }}</h2>
         <p>{{ p.city }}, {{ p.state }}</p>
+        <div class="project-card-progress">
+          <div>
+            <span>Recorded progress</span><strong>{{ p.schedule.progress }}%</strong>
+          </div>
+          <div
+            class="progress-track"
+            role="progressbar"
+            [attr.aria-valuenow]="p.schedule.progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <span [style.width.%]="p.schedule.progress"></span>
+          </div>
+        </div>
         <div class="project-card-bottom">
           <span>{{ p.endDate | date: 'mediumDate' : 'UTC' }}<small>Expected completion</small></span
-          ><span>{{ p.members.length }}<small>Team members</small></span>
+          ><span>{{ projectManager(p) }}<small>Project manager</small></span>
         </div>
         <span class="text-button">View project →</span></a
       >

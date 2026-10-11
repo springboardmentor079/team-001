@@ -103,6 +103,12 @@ export class ProjectsComponent {
   get delayedCount() {
     return this.projects().filter((p) => p.status === 'DELAYED').length;
   }
+  projectManager(project: Project) {
+    return (
+      project.members.find((member) => member.user.role === 'PROJECT_MANAGER')?.user.name ||
+      'Project team'
+    );
+  }
   get transitions() {
     const options: Record<string, string[]> = {
       PLANNING: ['ACTIVE', 'CANCELLED'],

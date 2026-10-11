@@ -197,6 +197,33 @@
   </section>
 }
 <section class="panel">
+  <div class="resource-toolbar">
+    <div class="field">
+      <label for="equipment-search">Search equipment</label>
+      <input
+        id="equipment-search"
+        placeholder="Name, code, type or location"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="filterSearch($event)"
+      />
+    </div>
+    <div class="field">
+      <label for="equipment-filter">Availability</label>
+      <select
+        id="equipment-filter"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="filterStatus($event)"
+      >
+        <option value="">All statuses</option>
+        <option value="AVAILABLE">Available</option>
+        <option value="IN_USE">In use</option>
+        <option value="RESERVED">Reserved</option>
+        <option value="MAINTENANCE">Maintenance</option>
+        <option value="UNAVAILABLE">Unavailable</option>
+      </select>
+    </div>
+    <span>{{ filteredRecords().length }} units</span>
+  </div>
   <div class="table-scroll">
     <table>
       <thead>
@@ -211,7 +238,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of data()?.records || []; track item.id) {
+        @for (item of pagedRecords(); track item.id) {
           <tr>
             <td>
               <strong>{{ item.name }}</strong
@@ -220,9 +247,13 @@
             <td>{{ item.type }}</td>
             <td>{{ item.location }}</td>
             <td>
-              <span class="tag" [class.green-tag]="item.status === 'AVAILABLE'">{{
-                label(item.status)
-              }}</span>
+              <span
+                class="tag"
+                [class.green-tag]="item.status === 'AVAILABLE'"
+                [class.orange-tag]="item.status === 'RESERVED' || item.status === 'MAINTENANCE'"
+                [class.critical-tag]="item.status === 'UNAVAILABLE'"
+                >{{ label(item.status) }}</span
+              >
             </td>
             <td>{{ item.hourlyRate | currency: auth.user()?.organization?.currency }}</td>
             <td>
@@ -271,4 +302,13 @@
       </tbody>
     </table>
   </div>
+  @if (totalPages() > 1) {
+    <div class="pagination">
+      <button class="btn" [disabled]="page() === 1" (click)="page.set(page() - 1)">Previous</button
+      ><span>Page {{ page() }} of {{ totalPages() }}</span
+      ><button class="btn" [disabled]="page() === totalPages()" (click)="page.set(page() + 1)">
+        Next
+      </button>
+    </div>
+  }
 </section>

@@ -1,122 +1,387 @@
-<div class="page-heading">
+<div class="page-heading operations-heading">
   <div>
-    <span class="eyebrow dark">YOUR WORKSPACE, CONNECTED</span>
-    <h1>Welcome, {{ firstName }}<span class="orange">.</span></h1>
-    <p>Your account, team access, and recent activity in one place.</p>
+    <span class="eyebrow dark">CONSTRUCTION OPERATIONS</span>
+    <h1>Operations overview<span class="brand-dot">.</span></h1>
+    <p>Project delivery, resources, cost, safety and field activity in one controlled view.</p>
   </div>
-  <a class="btn secondary" routerLink="/profile"><bt-icon name="user" />Manage profile</a>
+  @if (data(); as summary) {
+    <div class="reporting-period">
+      <span class="status-dot"></span>
+      <div>
+        <strong>{{ summary.operations.sourceLabel }}</strong>
+        <small>Updated {{ summary.operations.generatedAt | date: 'dd MMM yyyy · h:mm a' }}</small>
+      </div>
+    </div>
+  }
 </div>
-<section class="workspace-hero">
-  <img src="/images/construction.jpg" alt="Cranes overlooking an active construction site" />
-  <div class="hero-shade"></div>
-  <div class="hero-copy">
-    <span class="hero-pill">BUILDTRACK WORKSPACE</span>
-    <h2>Good work starts<br />with a connected team.</h2>
-    <p>
-      {{ auth.user()?.organization?.name }} <span> / </span> {{ label(auth.user()?.role || '') }}
-    </p>
-  </div>
-  <div class="hero-corner">
-    <bt-icon name="building" /><span>FROM FOUNDATION<br /><strong>TO FINISH.</strong></span>
-  </div>
-</section>
+
 @if (error()) {
   <div class="notice error" role="alert">
     {{ error() }}<button class="text-button" (click)="load()">Try again</button>
   </div>
 }
+
 @if (loading()) {
-  <div class="metrics-grid" aria-label="Loading account summary" aria-busy="true">
-    @for (i of [1, 2, 3]; track i) {
+  <div class="operations-kpis" aria-label="Loading operations summary" aria-busy="true">
+    @for (i of [1, 2, 3, 4]; track i) {
       <div class="metric skeleton"></div>
     }
   </div>
+  <div class="skeleton" style="height: 420px" aria-hidden="true"></div>
 }
+
 @if (data(); as summary) {
-  <div class="metrics-grid">
-    <article class="metric">
+  <section class="operations-kpis" aria-label="Operations key performance indicators">
+    <article class="metric operations-metric">
       <div class="metric-head">
-        <span>YOUR ACCESS LEVEL</span
-        ><span class="icon-tile orange-tile"><bt-icon name="shield" /></span>
+        <span>ACTIVE PROJECTS</span
+        ><span class="icon-tile green-tile"><bt-icon name="building" /></span>
       </div>
-      <strong>{{ label(summary.role) }}</strong
-      ><small>Permissions managed by your organization</small>
+      <strong>{{ animated().activeProjects }}</strong>
+      <small>{{ summary.operations.projects.length }} visible projects in your scope</small>
     </article>
-    <article class="metric">
+    <article class="metric operations-metric">
       <div class="metric-head">
-        <span>ACTIVE SESSIONS</span
+        <span>ACTIVE WORKFORCE</span
+        ><span class="icon-tile sage-tile"><bt-icon name="users" /></span>
+      </div>
+      <strong>{{
+        summary.operations.summary.activeWorkforce === null ? '—' : animated().activeWorkforce
+      }}</strong>
+      <small>{{
+        summary.operations.summary.activeWorkforce === null
+          ? 'Available with workforce access'
+          : 'Active worker profiles'
+      }}</small>
+    </article>
+    <article class="metric operations-metric">
+      <div class="metric-head">
+        <span>BUDGET UTILISATION</span
         ><span class="icon-tile blue-tile"><bt-icon name="activity" /></span>
       </div>
-      <strong
-        >{{ summary.sessions }}
-        <span class="metric-unit">{{
-          summary.sessions === 1 ? 'session' : 'sessions'
-        }}</span></strong
-      ><small>Authenticated sessions across your devices</small>
+      <strong>{{
+        summary.operations.summary.budgetUtilization === null
+          ? '—'
+          : animated().budgetUtilization + '%'
+      }}</strong>
+      <small>{{
+        summary.operations.summary.budgetUtilization === null
+          ? 'Available with finance access'
+          : 'Actuals plus open commitments'
+      }}</small>
     </article>
-    <article class="metric">
+    <article
+      class="metric operations-metric"
+      [class.metric-warning]="summary.operations.summary.atRiskProjects > 0"
+    >
       <div class="metric-head">
-        <span>MEMBER SINCE</span><span class="icon-tile green-tile"><bt-icon name="clock" /></span>
+        <span>PROJECT HEALTH</span
+        ><span class="icon-tile amber-tile"><bt-icon name="shield" /></span>
       </div>
-      <strong>{{ summary.memberSince | date: 'dd MMM yyyy' }}</strong
-      ><small>A part of {{ summary.organization.name }}</small>
+      <strong>{{ animated().healthyProjects }} <span class="metric-unit">healthy</span></strong>
+      <small>{{ summary.operations.summary.atRiskProjects }} project(s) need priority review</small>
     </article>
-  </div>
-  <div class="overview-grid">
-    <section class="panel">
+  </section>
+
+  @if (featuredProject(); as project) {
+    <section class="featured-project panel">
+      <div class="featured-copy">
+        <div class="featured-meta">
+          <span class="tag green-tag">FEATURED PROJECT</span>
+          <span>{{ project.code }}</span>
+        </div>
+        <h2>{{ project.name }}</h2>
+        <p>{{ project.city }}, {{ project.state }} · {{ project.manager || 'Project team' }}</p>
+        <div class="featured-progress-heading">
+          <span>Recorded completion</span
+          ><strong>{{ animatedProgress()[project.id] || 0 }}%</strong>
+        </div>
+        <div
+          class="progress-track progress-track-lg"
+          role="progressbar"
+          [attr.aria-valuenow]="project.progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <span [style.width.%]="animatedProgress()[project.id] || 0"></span>
+        </div>
+        <div class="featured-stats">
+          <div>
+            <strong>{{ label(project.status) }}</strong
+            ><small>Project status</small>
+          </div>
+          <div>
+            <strong>{{ project.endDate | date: 'dd MMM yyyy' : 'UTC' }}</strong
+            ><small>Expected completion</small>
+          </div>
+          <div>
+            <strong>{{
+              project.budgetUtilization === null ? '—' : project.budgetUtilization + '%'
+            }}</strong
+            ><small>Forecast budget use</small>
+          </div>
+        </div>
+        <a class="btn primary" [routerLink]="['/projects', project.id]"
+          >Open project <bt-icon name="arrow"
+        /></a>
+      </div>
+      <div class="site-blueprint" aria-hidden="true">
+        <span class="illustration-label">ARCHITECTURAL ILLUSTRATION · DECORATIVE</span>
+        <svg viewBox="0 0 620 390" role="presentation">
+          <g class="blueprint-grid">
+            <path
+              d="M30 50H590M30 100H590M30 150H590M30 200H590M30 250H590M30 300H590M30 350H590M80 25V365M160 25V365M240 25V365M320 25V365M400 25V365M480 25V365M560 25V365"
+            />
+          </g>
+          <g class="building-lines">
+            <path
+              d="M105 330V188H302V330M128 330V212H278V330M128 245H278M128 278H278M128 311H278M153 212V330M203 212V330M253 212V330"
+            />
+            <path d="M302 330V238H415V330M322 263H395M322 292H395M348 238V330" />
+          </g>
+          <g class="scaffold">
+            <path
+              d="M90 180V335M315 180V335M78 208H327M78 254H327M78 300H327M90 208L136 254L90 300M315 208L269 254L315 300"
+            />
+          </g>
+          <g class="crane">
+            <path
+              class="crane-mast"
+              d="M435 330V74M414 330H456M419 98H451M422 128H448M422 158H448M422 188H448M422 218H448M422 248H448M422 278H448M422 308H448M420 98L450 128M450 98L420 128M420 158L450 188M450 158L420 188M420 218L450 248M450 218L420 248M420 278L450 308M450 278L420 308"
+            />
+            <g class="crane-boom">
+              <path d="M435 74H585M435 74L520 42M435 74L401 42M520 42L585 74M435 74L520 42" />
+              <path class="crane-cable" d="M535 57V180" />
+              <rect class="crane-load" x="516" y="180" width="38" height="22" rx="2" />
+            </g>
+          </g>
+          <g class="ground">
+            <path d="M50 330H575M70 342H552" />
+            <circle cx="487" cy="323" r="13" />
+            <circle cx="532" cy="323" r="13" />
+            <path d="M470 318H548L531 292H493Z" />
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    @if (project.milestones.length) {
+      <section class="panel milestone-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow dark">PROJECT SEQUENCE</span>
+            <h2>Milestone timeline</h2>
+            <p>Saved milestone status and completion from {{ project.name }}.</p>
+          </div>
+          <a class="text-link-green" [routerLink]="['/projects', project.id, 'schedule']"
+            >Open schedule →</a
+          >
+        </div>
+        <div class="milestone-timeline">
+          @for (milestone of project.milestones; track milestone.id; let index = $index) {
+            <article
+              class="milestone-step"
+              [class.is-complete]="milestone.status === 'COMPLETED'"
+              [class.is-delayed]="milestone.status === 'DELAYED'"
+              [style.animation-delay.ms]="index * 90"
+            >
+              <span class="milestone-node"
+                ><bt-icon [name]="milestone.status === 'COMPLETED' ? 'check' : 'clock'"
+              /></span>
+              <div>
+                <strong>{{ milestone.name }}</strong
+                ><small>{{ milestone.plannedDate | date: 'dd MMM yyyy' : 'UTC' }}</small
+                ><span>{{ milestone.progress }}% · {{ label(milestone.status) }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <div class="operations-grid">
+    <section class="panel portfolio-panel">
       <div class="panel-heading">
         <div>
-          <h2>Recent account activity</h2>
-          <p>A record of your latest account actions.</p>
+          <span class="eyebrow dark">DELIVERY CONTROL</span>
+          <h2>Project performance</h2>
+          <p>Recorded progress, schedule exceptions and financial exposure.</p>
         </div>
-        <span class="tag neutral">Latest {{ summary.activity.length }}</span>
+        @if (auth.user()?.permissions?.includes('PROJECT_VIEW')) {
+          <a class="text-link-green" routerLink="/projects">All projects →</a>
+        }
       </div>
-      <div class="activity-list">
-        @for (item of summary.activity; track item.id) {
-          <div class="activity-row">
-            <span class="activity-mark"
-              ><bt-icon [name]="item.action === 'LOGIN' ? 'shield' : 'user'"
-            /></span>
+      <div class="portfolio-list">
+        @for (item of summary.operations.projects.slice(0, 5); track item.id) {
+          <a class="portfolio-row" [routerLink]="['/projects', item.id]">
+            <div class="portfolio-name">
+              <span class="project-monogram">{{ item.code.slice(-3) }}</span>
+              <div>
+                <strong>{{ item.name }}</strong
+                ><small>{{ item.city }} · {{ label(item.status) }}</small>
+              </div>
+            </div>
+            <div class="portfolio-progress">
+              <div>
+                <span>Progress</span><strong>{{ animatedProgress()[item.id] || 0 }}%</strong>
+              </div>
+              <div class="progress-track">
+                <span [style.width.%]="animatedProgress()[item.id] || 0"></span>
+              </div>
+            </div>
+            <span
+              class="risk-chip"
+              [class.risk-high]="item.riskScore >= 50"
+              [class.risk-medium]="item.riskScore >= 20 && item.riskScore < 50"
+              >{{
+                item.riskScore >= 50 ? 'High risk' : item.riskScore >= 20 ? 'Monitor' : 'On track'
+              }}</span
+            >
+          </a>
+        } @empty {
+          <div class="empty-state">No project records are available for this account.</div>
+        }
+      </div>
+    </section>
+
+    <section class="panel activity-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow dark">RECORDED ACTIVITY</span>
+          <h2>Recent site activity</h2>
+          <p>Persisted actions from visible projects.</p>
+        </div>
+        <span class="data-badge"><span class="status-dot"></span>Database</span>
+      </div>
+      <div class="activity-list operational-activity">
+        @for (item of summary.operations.activity; track item.id; let index = $index) {
+          <a
+            class="activity-row"
+            [routerLink]="['/projects', item.projectId]"
+            [style.animation-delay.ms]="index * 55"
+          >
+            <span class="activity-mark"><bt-icon name="activity" /></span>
             <div>
               <strong>{{ activity(item.action) }}</strong
-              ><small>{{ item.createdAt | date: 'dd MMM yyyy · h:mm a' }}</small>
+              ><small>{{ item.projectName }} · {{ item.actor }}</small
+              ><time>{{ item.createdAt | date: 'dd MMM · h:mm a' }}</time>
             </div>
-            <span class="activity-state">Recorded</span>
-          </div>
+          </a>
         } @empty {
-          <div class="empty-state">
-            Your account activity will appear here after your next action.
+          <div class="empty-state">No project activity has been recorded yet.</div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <div class="attention-grid">
+    <section class="panel attention-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow dark">PRIORITY REVIEW</span>
+          <h2>Schedule and project risk</h2>
+        </div>
+        <span class="tag" [class.orange-tag]="atRiskProjects().length"
+          >{{ atRiskProjects().length }} flagged</span
+        >
+      </div>
+      <div class="attention-list">
+        @for (item of atRiskProjects(); track item.id) {
+          <a [routerLink]="['/projects', item.id]"
+            ><span class="alert-indicator" [class.critical]="item.riskScore >= 50"></span>
+            <div>
+              <strong>{{ item.name }}</strong
+              ><small>{{ item.overdue }} overdue item(s) · Risk {{ item.riskScore }}/100</small>
+            </div>
+            <bt-icon name="chevron"
+          /></a>
+        } @empty {
+          <div class="healthy-state">
+            <bt-icon name="check" />
+            <div>
+              <strong>No priority project exceptions</strong
+              ><small>Current controls are within configured thresholds.</small>
+            </div>
           </div>
         }
       </div>
-      <div class="panel-foot"><bt-icon name="lock" />Only your account activity is shown here.</div>
     </section>
-    <div class="side-panels">
-      <section class="panel organization-panel">
-        <span class="eyebrow dark">YOUR ORGANIZATION</span
-        ><span class="organization-icon"><bt-icon name="building" /></span>
-        <h2>{{ summary.organization.name }}</h2>
-        <dl>
-          <div>
-            <dt>Currency</dt>
-            <dd>{{ summary.organization.currency }}</dd>
+    <section class="panel attention-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow dark">SAFETY & MAINTENANCE</span>
+          <h2>Operational alerts</h2>
+        </div>
+        <span class="tag neutral"
+          >{{
+            summary.operations.summary.safetyAlerts + summary.operations.summary.maintenanceAlerts
+          }}
+          open</span
+        >
+      </div>
+      <div class="alert-summary">
+        <div>
+          <span class="alert-icon-soft amber"><bt-icon name="shield" /></span
+          ><strong>{{ summary.operations.summary.safetyAlerts }}</strong
+          ><small>Unresolved safety findings</small>
+        </div>
+        <div>
+          <span class="alert-icon-soft blue"><bt-icon name="activity" /></span
+          ><strong>{{ summary.operations.summary.maintenanceAlerts }}</strong
+          ><small>Priority maintenance items</small>
+        </div>
+      </div>
+      @for (alert of summary.operations.maintenanceAlerts; track alert.id) {
+        <a class="maintenance-row" routerLink="/equipment"
+          ><div>
+            <strong>{{ alert.equipment }}</strong
+            ><small>{{ alert.type }} · {{ alert.scheduledAt | date: 'dd MMM' }}</small>
           </div>
-          <div>
-            <dt>Time zone</dt>
-            <dd>{{ summary.organization.timezone }}</dd>
-          </div>
-          <div>
-            <dt>Account email</dt>
-            <dd class="break-word">{{ auth.user()?.email }}</dd>
-          </div>
-        </dl>
-      </section>
-      <section class="security-card">
-        <span class="icon-tile green-tile"><bt-icon name="shield" /></span>
-        <h3>Keep your workspace secure</h3>
-        <p>Use a unique password and keep your account details up to date.</p>
-        <a routerLink="/security">Review security <bt-icon name="arrow" /></a>
-      </section>
-    </div>
+          <span
+            class="tag"
+            [class.orange-tag]="alert.priority === 'HIGH'"
+            [class.critical-tag]="alert.priority === 'CRITICAL'"
+            >{{ label(alert.priority) }}</span
+          ></a
+        >
+      }
+    </section>
   </div>
+
+  <section class="panel account-activity-panel">
+    <div class="panel-heading">
+      <div>
+        <span class="eyebrow dark">ACCOUNT AUDIT</span>
+        <h2>Recent account activity</h2>
+        <p>Your latest authenticated account actions.</p>
+      </div>
+      <span class="tag neutral">Latest {{ summary.activity.length }}</span>
+    </div>
+    <div class="account-activity-list">
+      @for (item of summary.activity; track item.id) {
+        <div>
+          <span class="activity-mark"
+            ><bt-icon [name]="item.action === 'LOGIN' ? 'shield' : 'user'" /></span
+          ><strong>{{ activity(item.action) }}</strong
+          ><time>{{ item.createdAt | date: 'dd MMM yyyy · h:mm a' }}</time>
+        </div>
+      } @empty {
+        <div class="empty-state">Your account activity will appear after your next action.</div>
+      }
+    </div>
+  </section>
+
+  <section class="account-context">
+    <div>
+      <span class="avatar">{{ firstName?.charAt(0) }}</span>
+      <div>
+        <strong>{{ auth.user()?.name }}</strong
+        ><small>{{ label(summary.role) }} · {{ summary.organization.name }}</small>
+      </div>
+    </div>
+    <span>Member since {{ summary.memberSince | date: 'dd MMM yyyy' }}</span>
+    <span>{{ summary.sessions }} active {{ summary.sessions === 1 ? 'session' : 'sessions' }}</span>
+    <a routerLink="/profile">Manage profile →</a>
+  </section>
 }
