@@ -23,7 +23,7 @@ async function seed() {
     },
   });
   const accounts: [string, string, Role][] = [
-    ['admin', 'Anushka Sharma', 'ADMINISTRATOR'],
+    ['admin', 'Anushka Verma', 'ADMINISTRATOR'],
     ['manager', 'Arjun Mehta', 'PROJECT_MANAGER'],
     ['engineer', 'Priya Nair', 'SITE_ENGINEER'],
     ['contractor', 'Vikram Singh', 'CONTRACTOR'],
@@ -33,7 +33,7 @@ async function seed() {
   for (const [alias, name, role] of accounts) {
     await db.user.upsert({
       where: { email: `${alias}@buildtrack.local` },
-      update: {},
+      update: { name, role },
       create: {
         organizationId: organization.id,
         name,
