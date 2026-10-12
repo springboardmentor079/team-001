@@ -61,6 +61,11 @@ export interface AccountOverview {
         progress: number;
       }[];
     }[];
+    analytics: {
+      statusDistribution: { label: string; value: number }[];
+      projectPerformance: { label: string; progress: number; risk: number }[];
+      progressTrend: { date: string; progress: number; observations: number }[];
+    };
     activity: {
       id: string;
       action: string;

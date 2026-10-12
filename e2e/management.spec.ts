@@ -30,7 +30,10 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => {
   if (!organizationId) return;
-  const storedVersions = await db.documentVersion.findMany({ where: { document: { organizationId } }, select: { storagePath: true } });
+  const storedVersions = await db.documentVersion.findMany({
+    where: { document: { organizationId } },
+    select: { storagePath: true },
+  });
   await db.shift.deleteMany({ where: { worker: { organizationId } } });
   await db.attendance.deleteMany({ where: { worker: { organizationId } } });
   await db.workerProjectAssignment.deleteMany({ where: { worker: { organizationId } } });
@@ -284,7 +287,9 @@ test('workforce assignment, attendance, shift and payroll estimate persist', asy
   await page.getByLabel('Start date').fill('2026-09-01');
   await page.getByRole('button', { name: 'Assign worker' }).click();
   await expect(page.getByRole('status')).toHaveText('Worker assigned.');
-  const worker = await db.workerProfile.findFirstOrThrow({ where: { organizationId, employeeCode: 'EMP-E2E-01' } });
+  const worker = await db.workerProfile.findFirstOrThrow({
+    where: { organizationId, employeeCode: 'EMP-E2E-01' },
+  });
   await page.getByRole('button', { name: 'Record attendance' }).click();
   await page.getByLabel('Worker').selectOption(worker.id);
   await page.getByLabel('Project').selectOption(project.id);
@@ -292,7 +297,9 @@ test('workforce assignment, attendance, shift and payroll estimate persist', asy
   await page.getByLabel('Hours', { exact: true }).fill('8');
   await page.getByRole('button', { name: 'Save attendance' }).click();
   await expect(page.getByRole('status')).toHaveText('Attendance recorded.');
-  await expect(page.getByRole('row').filter({ hasText: 'E2E Site Mason' }).last()).toContainText('2,000.00');
+  await expect(page.getByRole('row').filter({ hasText: 'E2E Site Mason' }).last()).toContainText(
+    '2,000.00',
+  );
   await page.getByRole('button', { name: 'Schedule shift' }).click();
   await page.getByLabel('Worker').selectOption(worker.id);
   await page.getByLabel('Project').selectOption(project.id);
@@ -308,14 +315,49 @@ test('workforce assignment, attendance, shift and payroll estimate persist', asy
   await page.getByLabel('Location').fill('Tower A');
   await page.locator('form').getByRole('button', { name: 'Schedule shift', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Shift scheduled.');
-  await expect(page.getByRole('row').filter({ hasText: 'Tower A' })).toContainText('E2E Site Mason');
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/workforce-desktop.png', fullPage: true });
+  await expect(page.getByRole('row').filter({ hasText: 'Tower A' })).toContainText(
+    'E2E Site Mason',
+  );
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/workforce-desktop.png',
+    fullPage: true,
+  });
 });
 
-test('procurement request, approval, purchase order, receipt and invoice persist', async ({ page }) => {
+test('procurement request, approval, purchase order, receipt and invoice persist', async ({
+  page,
+}) => {
   const admin = await db.user.findUniqueOrThrow({ where: { email } });
-  const project = await db.project.create({ data: { organizationId, code: 'BT-PROC-E2E', name: 'Procurement E2E', category: 'Commercial', address: 'Procurement site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: { userId: admin.id } } } });
-  const material = await db.material.create({ data: { organizationId, sku: 'PROC-E2E-01', name: 'E2E Ready Mix', category: 'Concrete', unit: 'm³', currentStock: '10', minimumLevel: '5', criticalLevel: '2', unitCost: '5000' } });
+  const project = await db.project.create({
+    data: {
+      organizationId,
+      code: 'BT-PROC-E2E',
+      name: 'Procurement E2E',
+      category: 'Commercial',
+      address: 'Procurement site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: { userId: admin.id } },
+    },
+  });
+  const material = await db.material.create({
+    data: {
+      organizationId,
+      sku: 'PROC-E2E-01',
+      name: 'E2E Ready Mix',
+      category: 'Concrete',
+      unit: 'm³',
+      currentStock: '10',
+      minimumLevel: '5',
+      criticalLevel: '2',
+      unitCost: '5000',
+    },
+  });
   await page.getByRole('link', { name: 'Procurement', exact: true }).click();
   await page.getByRole('button', { name: 'Add vendor' }).click();
   await page.getByLabel('Vendor code').fill('VEN-E2E-01');
@@ -334,8 +376,12 @@ test('procurement request, approval, purchase order, receipt and invoice persist
   const requestRow = page.getByRole('row').filter({ hasText: 'Procurement E2E' }).first();
   await requestRow.getByRole('button', { name: 'Approve' }).click();
   await expect(requestRow).toContainText('Approved');
-  const procurement = await db.procurementRequest.findFirstOrThrow({ where: { projectId: project.id } });
-  const vendor = await db.vendor.findFirstOrThrow({ where: { organizationId, code: 'VEN-E2E-01' } });
+  const procurement = await db.procurementRequest.findFirstOrThrow({
+    where: { projectId: project.id },
+  });
+  const vendor = await db.vendor.findFirstOrThrow({
+    where: { organizationId, code: 'VEN-E2E-01' },
+  });
   await page.getByRole('button', { name: 'Issue purchase order' }).click();
   await page.getByLabel('Approved request').selectOption(procurement.id);
   await page.getByLabel('Vendor').selectOption(vendor.id);
@@ -353,7 +399,9 @@ test('procurement request, approval, purchase order, receipt and invoice persist
   await page.getByRole('button', { name: 'Record receipt' }).click();
   await expect(page.getByRole('status')).toHaveText('Goods receipt recorded.');
   await expect(orderRow).toContainText('Received');
-  expect((await db.material.findUniqueOrThrow({ where: { id: material.id } })).currentStock.toString()).toBe('22');
+  expect(
+    (await db.material.findUniqueOrThrow({ where: { id: material.id } })).currentStock.toString(),
+  ).toBe('22');
   await orderRow.getByRole('button', { name: 'Invoice' }).click();
   await page.getByLabel('Invoice number').fill('INV-E2E-001');
   await page.getByLabel('Invoice date').fill('2026-09-28');
@@ -363,12 +411,31 @@ test('procurement request, approval, purchase order, receipt and invoice persist
   const invoiceRow = page.getByRole('row').filter({ hasText: 'INV-E2E-001' });
   await invoiceRow.getByRole('button', { name: 'Verify' }).click();
   await expect(invoiceRow).toContainText('Verified');
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/procurement-desktop.png', fullPage: true });
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/procurement-desktop.png',
+    fullPage: true,
+  });
 });
 
 test('budget allocation and approved expense update the financial forecast', async ({ page }) => {
   const admin = await db.user.findUniqueOrThrow({ where: { email } });
-  const project = await db.project.create({ data: { organizationId, code: 'BT-FIN-E2E', name: 'Finance E2E', category: 'Commercial', address: 'Finance site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: { userId: admin.id } } } });
+  const project = await db.project.create({
+    data: {
+      organizationId,
+      code: 'BT-FIN-E2E',
+      name: 'Finance E2E',
+      category: 'Commercial',
+      address: 'Finance site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: { userId: admin.id } },
+    },
+  });
   await page.getByRole('link', { name: 'Budgets & expenses', exact: true }).click();
   await page.getByRole('button', { name: 'Allocate budget' }).click();
   await page.getByLabel('Project').selectOption(project.id);
@@ -389,18 +456,49 @@ test('budget allocation and approved expense update the financial forecast', asy
   const expenseRow = page.getByRole('row').filter({ hasText: 'Temporary power connection' });
   await expenseRow.getByRole('button', { name: 'Approve' }).click();
   await expect(expenseRow).toContainText('Approved');
-  await expect(page.getByRole('article').filter({ hasText: 'Finance E2E' })).toContainText('₹900,000.00');
+  await expect(page.getByRole('article').filter({ hasText: 'Finance E2E' })).toContainText(
+    '₹900,000.00',
+  );
   await expenseRow.getByRole('button', { name: 'Mark paid' }).click();
   await expect(expenseRow).toContainText('Paid');
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/finance-desktop.png', fullPage: true });
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/finance-desktop.png',
+    fullPage: true,
+  });
 });
 
-test('document upload, authorized downloads, reports and recipient notification work', async ({ page }) => {
+test('document upload, authorized downloads, reports and recipient notification work', async ({
+  page,
+}) => {
   const admin = await db.user.findUniqueOrThrow({ where: { email } });
   const managerEmail = `records-manager-${organizationId}@buildtrack.test`;
-  const manager = await db.user.create({ data: { organizationId, email: managerEmail, name: 'Records Manager', role: 'PROJECT_MANAGER', passwordHash: await bcrypt.hash(password, 12) } });
-  const project = await db.project.create({ data: { organizationId, code: 'BT-DOC-E2E', name: 'Records E2E', category: 'Commercial', address: 'Records site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: [{ userId: admin.id }, { userId: manager.id }] } } });
+  const manager = await db.user.create({
+    data: {
+      organizationId,
+      email: managerEmail,
+      name: 'Records Manager',
+      role: 'PROJECT_MANAGER',
+      passwordHash: await bcrypt.hash(password, 12),
+    },
+  });
+  const project = await db.project.create({
+    data: {
+      organizationId,
+      code: 'BT-DOC-E2E',
+      name: 'Records E2E',
+      category: 'Commercial',
+      address: 'Records site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: [{ userId: admin.id }, { userId: manager.id }] },
+    },
+  });
   await page.getByRole('link', { name: 'Documents & reports', exact: true }).click();
   await page.getByRole('button', { name: 'Upload document' }).click();
   await page.locator('#doc-project').selectOption(project.id);
@@ -432,15 +530,58 @@ test('document upload, authorized downloads, reports and recipient notification 
   await page.getByRole('link', { name: 'Notifications', exact: true }).click();
   await expect(page.getByText('Document updated: Tower A approved drawing')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/notifications-desktop.png', fullPage: true });
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/notifications-desktop.png',
+    fullPage: true,
+  });
 });
 
 test('analytics reconciles project risk and labels demo providers', async ({ page }) => {
   const admin = await db.user.findUniqueOrThrow({ where: { email } });
-  const project = await db.project.create({ data: { organizationId, code: 'BT-AN-E2E', name: 'Analytics E2E', category: 'Commercial', address: 'Analytics site', city: 'Pune', state: 'Maharashtra', startDate: new Date('2026-09-01'), endDate: new Date('2027-12-31'), budget: '1000000', estimatedCost: '900000', members: { create: { userId: admin.id } } } });
-  await db.workItem.create({ data: { projectId: project.id, kind: 'MILESTONE', name: 'Structural milestone', startDate: new Date('2026-09-01'), plannedDate: new Date('2026-09-20'), status: 'IN_PROGRESS', progress: 40 } });
-  await db.siteReport.create({ data: { projectId: project.id, authorId: admin.id, reportDate: new Date('2026-09-28'), weather: 'Clear', workersPresent: 25, workCompleted: 'Structural columns', reportedProgress: 40 } });
+  const project = await db.project.create({
+    data: {
+      organizationId,
+      code: 'BT-AN-E2E',
+      name: 'Analytics E2E',
+      category: 'Commercial',
+      address: 'Analytics site',
+      city: 'Pune',
+      state: 'Maharashtra',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2027-12-31'),
+      budget: '1000000',
+      estimatedCost: '900000',
+      members: { create: { userId: admin.id } },
+    },
+  });
+  await db.workItem.create({
+    data: {
+      projectId: project.id,
+      kind: 'MILESTONE',
+      name: 'Structural milestone',
+      startDate: new Date('2026-09-01'),
+      plannedDate: new Date('2026-09-20'),
+      status: 'IN_PROGRESS',
+      progress: 40,
+    },
+  });
+  await db.siteReport.create({
+    data: {
+      projectId: project.id,
+      authorId: admin.id,
+      reportDate: new Date('2026-09-28'),
+      weather: 'Clear',
+      workersPresent: 25,
+      workCompleted: 'Structural columns',
+      reportedProgress: 40,
+    },
+  });
   await page.getByRole('link', { name: 'Analytics & insights', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Budget and expenditure trend' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Project status distribution' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Completion and risk' })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Budget and expenditure trend/ })).toBeVisible();
   const card = page.getByRole('button').filter({ hasText: 'Analytics E2E' });
   await expect(card).toContainText('40%');
   await expect(card).toContainText('Overdue');
@@ -448,15 +589,29 @@ test('analytics reconciles project risk and labels demo providers', async ({ pag
   await expect(page.getByText('Demonstration weather — not live')).toBeVisible();
   await expect(page.getByText('Camera feeds are not configured')).toBeVisible();
   await expect(page.getByText('40% reported progress')).toBeVisible();
+  await page.getByLabel('Project filter', { exact: true }).selectOption(project.id);
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(card).toBeVisible();
+  await expect(page.getByText('ML predictions withheld')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/analytics-desktop.png', fullPage: true });
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/analytics-desktop.png',
+    fullPage: true,
+  });
   await page.getByRole('link', { name: 'ML insights', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Schedule-delay probability' })).toBeVisible();
   await expect(page.getByText('Organization-scoped logistic regression')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Material-demand forecast' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Cost-at-completion forecast' })).toBeVisible();
   await expect(page.getByText('Organization-scoped ridge regression')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Predictive equipment maintenance' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Predictive equipment maintenance' }),
+  ).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ animations: 'disabled', path: 'tmp/ui/ml-insights-desktop.png', fullPage: true });
+  await page.screenshot({
+    animations: 'disabled',
+    path: 'tmp/ui/ml-insights-desktop.png',
+    fullPage: true,
+  });
 });

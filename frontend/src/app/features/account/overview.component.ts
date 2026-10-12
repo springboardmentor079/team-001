@@ -5,9 +5,10 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { IconComponent } from '../../core/icon.component';
 import { AccountOverview, ApiResponse, errorMessage, roleLabel } from '../../core/models';
+import { ChartSeries, DataChartComponent } from '../../shared/data-chart.component';
 @Component({
   selector: 'bt-overview',
-  imports: [IconComponent, RouterLink, DatePipe],
+  imports: [IconComponent, RouterLink, DatePipe, DataChartComponent],
   templateUrl: './overview.component.html',
 })
 export class OverviewComponent {
@@ -92,6 +93,27 @@ export class OverviewComponent {
         } as Record<string, string>
       )[action] || action
     );
+  }
+  dashboardStatusLabels(rows: { label: string }[]) {
+    return rows.map((row) => this.label(row.label));
+  }
+  dashboardStatusSeries(rows: { value: number }[]): ChartSeries[] {
+    return [{ name: 'Projects', values: rows.map((row) => row.value) }];
+  }
+  dashboardProjectLabels(rows: { label: string }[]) {
+    return rows.map((row) => row.label);
+  }
+  dashboardPerformanceSeries(rows: { progress: number; risk: number }[]): ChartSeries[] {
+    return [
+      { name: 'Completion', values: rows.map((row) => row.progress) },
+      { name: 'Rule risk', values: rows.map((row) => row.risk), color: '#D99128' },
+    ];
+  }
+  dashboardTrendLabels(rows: { date: string }[]) {
+    return rows.map((row) => row.date);
+  }
+  dashboardTrendSeries(rows: { progress: number }[]): ChartSeries[] {
+    return [{ name: 'Reported completion', values: rows.map((row) => row.progress) }];
   }
   private animateOperations(summary: AccountOverview) {
     const targets = {

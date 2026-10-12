@@ -93,6 +93,7 @@ app.get('/api/v1/account/overview', authenticate, async (req, res) => {
           where: projectScope(user),
           include: {
             workItems: { orderBy: { plannedDate: 'asc' } },
+            siteReports: { orderBy: { reportDate: 'asc' }, take: 24 },
             delays: { where: { status: { not: 'RESOLVED' } } },
             inspections: { where: { resolved: false } },
             members: {
@@ -221,6 +222,13 @@ app.get('/api/v1/account/overview', authenticate, async (req, res) => {
       ).length,
     0,
   );
+  const progressByDate = new Map<string, number[]>();
+  for (const project of projects) {
+    for (const report of project.siteReports) {
+      const date = report.reportDate.toISOString().slice(0, 10);
+      progressByDate.set(date, [...(progressByDate.get(date) || []), report.reportedProgress]);
+    }
+  }
   const maintenanceAlerts = equipment
     .flatMap((item) =>
       item.maintenance
@@ -257,6 +265,28 @@ app.get('/api/v1/account/overview', authenticate, async (req, res) => {
         maintenanceAlerts: maintenanceAlerts.length,
       },
       projects: operationalProjects,
+      analytics: {
+        statusDistribution: [...new Set(operationalProjects.map((project) => project.status))].map(
+          (status) => ({
+            label: status,
+            value: operationalProjects.filter((project) => project.status === status).length,
+          }),
+        ),
+        projectPerformance: operationalProjects.map((project) => ({
+          label: project.name,
+          progress: project.progress,
+          risk: project.riskScore,
+        })),
+        progressTrend: [...progressByDate.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, values]) => ({
+            date,
+            progress: Number(
+              (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1),
+            ),
+            observations: values.length,
+          })),
+      },
       activity: siteActivity.map((item) => ({
         id: item.id,
         action: item.action,

@@ -200,6 +200,33 @@
     }
   }
 
+  <section class="dashboard-chart-grid" aria-label="Portfolio visual analytics">
+    <bt-data-chart
+      title="Recorded completion trend"
+      subtitle="Average of dated site-report observations. Missing dates are not estimated."
+      kind="line"
+      [labels]="dashboardTrendLabels(summary.operations.analytics.progressTrend)"
+      [series]="dashboardTrendSeries(summary.operations.analytics.progressTrend)"
+      unit="%"
+    />
+    <bt-data-chart
+      title="Project status distribution"
+      subtitle="Visible projects grouped once by their saved status."
+      kind="donut"
+      [labels]="dashboardStatusLabels(summary.operations.analytics.statusDistribution)"
+      [series]="dashboardStatusSeries(summary.operations.analytics.statusDistribution)"
+    />
+    <bt-data-chart
+      class="dashboard-chart-wide"
+      title="Completion and operational risk"
+      subtitle="Recorded schedule progress compared with the documented rule-based risk score."
+      kind="bar"
+      [labels]="dashboardProjectLabels(summary.operations.analytics.projectPerformance)"
+      [series]="dashboardPerformanceSeries(summary.operations.analytics.projectPerformance)"
+      unit="%"
+    />
+  </section>
+
   <div class="operations-grid">
     <section class="panel portfolio-panel">
       <div class="panel-heading">

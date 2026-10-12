@@ -1,6 +1,427 @@
-<div class="page-heading"><div><span class="eyebrow dark">PORTFOLIO INTELLIGENCE</span><h1>Analytics & insights<span class="orange">.</span></h1><p>Reconciled operational signals with published calculation rules.</p></div></div>
-@if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
-@if (data(); as d) { <div class="project-stat-strip equipment-stats"><div><strong>{{ d.summary.projects }}</strong><span>Visible projects</span></div><div><strong>{{ d.summary.averageProgress }}%</strong><span>Average progress</span></div><div><strong>{{ d.summary.atRisk }}</strong><span>At risk</span></div><div><strong>{{ d.summary.overdueItems }}</strong><span>Overdue items</span></div><div><strong>{{ d.summary.lowStock === null ? 'Restricted' : d.summary.lowStock }}</strong><span>Low-stock materials</span></div></div>
-<section class="project-grid analytics-grid">@for (p of d.projects; track p.id) { <button class="panel project-card analytics-card" [class.selected]="selected()?.id === p.id" (click)="inspect(p)"><div class="project-card-top"><span class="tag">{{ p.code }}</span><span [class.orange]="p.riskScore >= 50">Risk {{ p.riskScore }}/100</span></div><h2>{{ p.name }}</h2><p>{{ p.insight }}</p><div class="progress-track"><span [style.width.%]="p.progress"></span></div><div class="project-stat-strip"><div><strong>{{ p.progress }}%</strong><span>Progress</span></div><div><strong>{{ p.overdue }}</strong><span>Overdue</span></div><div><strong>{{ p.criticalDelays }}</strong><span>Critical delays</span></div><div><strong>{{ p.budgetUtilization | number: '1.0-1' }}%</strong><span>Forecast use</span></div></div></button> } @empty { <div class="panel empty"><h2>No analytics available</h2><p>Assign projects to this account to see operational metrics.</p></div> }</section>
-<section class="settings-grid analytics-details"><article class="panel project-info"><h2>{{ selected()?.name || 'Project' }} trend</h2><div class="activity-list">@for (point of selected()?.trend || []; track point.date) { <div class="activity-row"><span class="status-dot"></span><span><strong>{{ point.progress }}% reported progress</strong><small>{{ point.workers }} workers present</small></span><time>{{ point.date | date: 'mediumDate' : 'UTC' }}</time></div> } @empty { <p>No site-report trend points yet.</p> }</div></article><article class="panel project-info"><h2>Provider status</h2>@if (weather(); as w) { <div class="notice"><strong>{{ w.label }}</strong><p>{{ w.location }} · {{ w.condition }} · {{ w.temperatureC }}°C · {{ w.rainChancePercent }}% rain chance</p><small>{{ w.note }}</small></div> } @if (cameras(); as c) { <div class="notice"><strong>{{ c.label }}</strong><p>{{ c.note }}</p></div> }</article></section>
-<section class="panel project-info"><h2>How these metrics are calculated</h2><dl class="details-list"><div><dt>Progress</dt><dd>{{ d.methodology.progress }}</dd></div><div><dt>Risk</dt><dd>{{ d.methodology.risk }}</dd></div><div><dt>Finance</dt><dd>{{ d.methodology.finance }}</dd></div></dl></section> }
+<div class="page-heading analytics-heading">
+  <div>
+    <span class="eyebrow dark">PORTFOLIO INTELLIGENCE</span>
+    <h1>Analytics & insights<span class="orange">.</span></h1>
+    <p>Traceable construction metrics from authorised operational records.</p>
+  </div>
+  @if (data(); as d) {
+    <div class="analytics-freshness">
+      <span class="status-dot"></span><strong>Database records</strong>
+      <small>Computed {{ d.generatedAt | date: 'dd MMM yyyy · h:mm a' }}</small>
+    </div>
+  }
+</div>
+
+<section class="panel analytics-filters" aria-label="Analytics filters">
+  <label
+    >Start date<input type="date" [value]="filter().start" (change)="updateFilter('start', $event)"
+  /></label>
+  <label
+    >End date<input type="date" [value]="filter().end" (change)="updateFilter('end', $event)"
+  /></label>
+  <label
+    >Project<select
+      aria-label="Project filter"
+      [value]="filter().projectId"
+      (change)="updateFilter('projectId', $event)"
+    >
+      <option value="">All permitted projects</option>
+      @for (project of availableProjects(); track project.id) {
+        <option [value]="project.id">{{ project.code }} · {{ project.name }}</option>
+      }
+    </select></label
+  >
+  <label
+    >Status<select [value]="filter().status" (change)="updateFilter('status', $event)">
+      <option value="">All statuses</option>
+      <option value="PLANNING">Planning</option>
+      <option value="ACTIVE">Active</option>
+      <option value="ON_HOLD">On hold</option>
+      <option value="DELAYED">Delayed</option>
+      <option value="COMPLETED">Completed</option>
+      <option value="CLOSED">Closed</option>
+      <option value="CANCELLED">Cancelled</option>
+    </select></label
+  >
+  <label
+    >Interval<select [value]="filter().interval" (change)="updateFilter('interval', $event)">
+      <option value="week">Weekly</option>
+      <option value="month">Monthly</option>
+    </select></label
+  >
+  <div class="filter-actions">
+    <button class="btn primary" (click)="load()" [disabled]="loading()">
+      {{ loading() ? 'Computing…' : 'Apply filters' }}</button
+    ><button class="btn" (click)="reset()">Reset</button>
+  </div>
+</section>
+
+@if (error()) {
+  <div class="notice error" role="alert">
+    {{ error() }} <button class="text-link-green" (click)="load()">Retry</button>
+  </div>
+}
+@if (loading() && !data()) {
+  <div class="analytics-skeleton" aria-label="Loading analytics">
+    <span></span><span></span><span></span><span></span>
+  </div>
+}
+
+@if (data(); as d) {
+  <p class="reporting-caption">
+    Reporting {{ d.reporting.start | date: 'dd MMM yyyy' : 'UTC' }}–{{
+      d.reporting.end | date: 'dd MMM yyyy' : 'UTC'
+    }}
+    · {{ label(d.reporting.interval) }} intervals · {{ d.reporting.timezone }}
+  </p>
+
+  <section class="analytics-kpis" aria-label="Analytics key performance indicators">
+    <article>
+      <span>ACTIVE PROJECTS</span><strong>{{ d.summary.activeProjects }}</strong
+      ><small>{{ d.summary.completedProjects }} completed or closed</small>
+    </article>
+    <article>
+      <span>OVERALL COMPLETION</span><strong>{{ d.summary.averageProgress }}%</strong
+      ><small>Weighted project schedule computation</small>
+    </article>
+    <article [class.attention]="d.summary.atRisk">
+      <span>AT-RISK PROJECTS</span><strong>{{ d.summary.atRisk }}</strong
+      ><small>{{ d.summary.overdueItems }} overdue work items</small>
+    </article>
+    <article>
+      <span>APPROVED BUDGET</span
+      ><strong>{{
+        d.summary.budget === null
+          ? 'Restricted'
+          : (d.summary.budget | currency: d.reporting.currency : 'symbol' : '1.0-0')
+      }}</strong
+      ><small>{{
+        d.summary.actual === null
+          ? 'Finance permission required'
+          : (d.summary.actual | currency: d.reporting.currency : 'symbol' : '1.0-0') + ' actual'
+      }}</small>
+    </article>
+    <article>
+      <span>BUDGET UTILISATION</span
+      ><strong>{{
+        d.summary.budgetUtilization === null
+          ? 'Restricted'
+          : (d.summary.budgetUtilization | number: '1.0-1') + '%'
+      }}</strong
+      ><small>Actual ÷ approved budget</small>
+    </article>
+    <article>
+      <span>RESOURCE UTILISATION</span
+      ><strong>{{
+        d.summary.resourceUtilization === null
+          ? 'Restricted'
+          : (d.summary.resourceUtilization | number: '1.0-1') + '%'
+      }}</strong
+      ><small>Assigned/in-use active equipment</small>
+    </article>
+    <article>
+      <span>PENDING PROCUREMENT</span
+      ><strong>{{
+        d.summary.pendingProcurement === null ? 'Restricted' : d.summary.pendingProcurement
+      }}</strong
+      ><small>Submitted or approved requests</small>
+    </article>
+    <article [class.attention]="d.summary.overdueDeliveries">
+      <span>OVERDUE DELIVERIES</span
+      ><strong>{{
+        d.summary.overdueDeliveries === null ? 'Restricted' : d.summary.overdueDeliveries
+      }}</strong
+      ><small>Past expected date, not received</small>
+    </article>
+  </section>
+
+  <section class="analytics-chart-grid">
+    @if (d.charts.budgetTrend; as budgetTrend) {
+      <bt-data-chart
+        class="chart-wide"
+        title="Budget and expenditure trend"
+        subtitle="Cumulative recorded actuals against the current approved budget ceiling. The ceiling is a reference, not a reconstructed historical plan."
+        kind="line"
+        [labels]="labels(budgetTrend)"
+        [series]="[
+          { name: 'Cumulative actual', values: values(budgetTrend, 'actual'), color: '#245C45' },
+          {
+            name: 'Current budget ceiling',
+            values: values(budgetTrend, 'budget'),
+            color: '#477BA8',
+          },
+        ]"
+        unit="₹"
+      />
+    }
+    <bt-data-chart
+      title="Project status distribution"
+      subtitle="Each visible project appears once under its saved status."
+      kind="donut"
+      [labels]="distributionLabels(d.charts.statusDistribution)"
+      [series]="distributions(d.charts.statusDistribution)"
+    />
+    <bt-data-chart
+      title="Recorded completion trend"
+      subtitle="Average of dated site-report observations. Gaps remain where no report was recorded."
+      kind="line"
+      [labels]="labels(d.charts.completionTrend)"
+      [series]="[
+        { name: 'Reported completion', values: values(d.charts.completionTrend, 'progress') },
+      ]"
+      unit="%"
+    />
+    <bt-data-chart
+      title="Workforce attendance trend"
+      subtitle="Distinct workers with approved present or half-day attendance records."
+      kind="line"
+      [labels]="labels(d.charts.workforceTrend)"
+      [series]="[
+        {
+          name: 'Workers present',
+          values: values(d.charts.workforceTrend, 'workers'),
+          color: '#477BA8',
+        },
+      ]"
+      unit="workers"
+    />
+    @if (d.charts.equipmentTrend; as equipmentTrend) {
+      <bt-data-chart
+        title="Equipment allocation trend"
+        subtitle="Allocation overlap days as a share of available active equipment-days."
+        kind="line"
+        [labels]="labels(equipmentTrend)"
+        [series]="[
+          {
+            name: 'Allocation utilisation',
+            values: values(equipmentTrend, 'utilization'),
+            color: '#D99128',
+          },
+        ]"
+        unit="%"
+      />
+    }
+    @if (d.charts.procurementTrend; as procurementTrend) {
+      <bt-data-chart
+        title="Procurement activity"
+        subtitle="Requests created and purchase orders issued during each reporting interval."
+        kind="line"
+        [labels]="labels(procurementTrend)"
+        [series]="[
+          { name: 'Requests', values: values(procurementTrend, 'requests') },
+          { name: 'Orders', values: values(procurementTrend, 'ordered'), color: '#477BA8' },
+        ]"
+        unit="records"
+      />
+    }
+  </section>
+
+  <section class="performance-section">
+    <div class="section-title">
+      <div>
+        <span class="eyebrow dark">PORTFOLIO COMPARISON</span>
+        <h2>Project-wise performance</h2>
+        <p>Completion, risk and financial values use the same scoped records as the KPI cards.</p>
+      </div>
+      <label
+        >Sort bars<select (change)="sortPerformance($any($event.target).value)">
+          <option value="progress">Completion</option>
+          <option value="risk">Risk</option>
+          <option value="actual">Actual spend</option>
+        </select></label
+      >
+    </div>
+    <div class="analytics-chart-grid comparison-grid">
+      <bt-data-chart
+        title="Completion and risk"
+        subtitle="Recorded schedule completion compared with the explainable rule-based risk score."
+        kind="bar"
+        [labels]="performanceLabels(d.charts.projectPerformance)"
+        [series]="performanceSeries(d.charts.projectPerformance, 'schedule')"
+        unit="%"
+      />
+      @if (d.charts.budgetTrend) {
+        <bt-data-chart
+          title="Approved budget versus actual"
+          subtitle="Actual includes approved/paid expenses and paid invoices only."
+          kind="bar"
+          [labels]="performanceLabels(d.charts.projectPerformance)"
+          [series]="performanceSeries(d.charts.projectPerformance, 'finance')"
+          unit="₹"
+        />
+      }
+      @if (d.charts.procurementDistribution; as procurementDistribution) {
+        <bt-data-chart
+          title="Procurement workflow distribution"
+          subtitle="Requests grouped by their persisted workflow state."
+          kind="donut"
+          [labels]="distributionLabels(procurementDistribution)"
+          [series]="distributions(procurementDistribution)"
+        />
+      }
+      @if (d.charts.equipmentDistribution; as equipmentDistribution) {
+        <bt-data-chart
+          title="Equipment status distribution"
+          subtitle="Active equipment grouped by its current mutually exclusive status."
+          kind="donut"
+          [labels]="distributionLabels(equipmentDistribution)"
+          [series]="distributions(equipmentDistribution)"
+        />
+      }
+    </div>
+  </section>
+
+  <section class="insight-layout">
+    <article class="panel computed-insights">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow dark">ACTIONABLE FINDINGS</span>
+          <h2>Computed insights</h2>
+          <p>Deterministic findings with their metric and source.</p>
+        </div>
+        <span class="tag neutral">RULE BASED</span>
+      </div>
+      <div class="insight-list">
+        @for (insight of d.insights; track insight.metric) {
+          <a
+            [routerLink]="insight.projectId ? ['/projects', insight.projectId] : ['/procurement']"
+            [class.high]="insight.severity === 'HIGH'"
+          >
+            <span class="insight-level"></span>
+            <div>
+              <strong>{{ insight.metric }}</strong>
+              <p>{{ insight.message }}</p>
+              <small
+                >{{ insight.source }} · as of
+                {{ insight.asOf | date: 'dd MMM yyyy' : 'UTC' }}</small
+              >
+            </div>
+          </a>
+        } @empty {
+          <div class="healthy-state">
+            <div>
+              <strong>No threshold exceptions in this view</strong
+              ><small>The selected records do not currently trigger the documented rules.</small>
+            </div>
+          </div>
+        }
+      </div>
+    </article>
+    <article class="panel model-readiness">
+      <span class="eyebrow dark">PREDICTIVE GOVERNANCE</span>
+      <h2>ML predictions withheld</h2>
+      <p>{{ d.predictiveReadiness.reason }}</p>
+      <a class="btn" [routerLink]="d.predictiveReadiness.location">Review model evidence</a>
+    </article>
+  </section>
+
+  <section class="project-grid analytics-grid">
+    @for (project of d.projects; track project.id) {
+      <button
+        class="panel project-card analytics-card"
+        [class.selected]="selected()?.id === project.id"
+        (click)="inspect(project)"
+      >
+        <div class="project-card-top">
+          <span class="tag">{{ project.code }}</span
+          ><span [class.orange]="project.riskScore >= 50"
+            >Rule risk {{ project.riskScore }}/100</span
+          >
+        </div>
+        <h2>{{ project.name }}</h2>
+        <p>{{ project.insight }}</p>
+        <div class="progress-track"><span [style.width.%]="project.progress"></span></div>
+        <div class="project-stat-strip">
+          <div>
+            <strong>{{ project.progress }}%</strong><span>Progress</span>
+          </div>
+          <div>
+            <strong>{{ project.overdue }}</strong
+            ><span>Overdue</span>
+          </div>
+          <div>
+            <strong>{{ project.criticalDelays }}</strong
+            ><span>Critical delays</span>
+          </div>
+          <div>
+            <strong>{{
+              project.budgetUtilization === null
+                ? 'Restricted'
+                : (project.budgetUtilization | number: '1.0-1') + '%'
+            }}</strong
+            ><span>Actual use</span>
+          </div>
+        </div>
+      </button>
+    } @empty {
+      <div class="panel empty">
+        <h2>No analytics available</h2>
+        <p>No permitted project records match the selected filters.</p>
+      </div>
+    }
+  </section>
+
+  <section class="settings-grid analytics-details">
+    <article class="panel project-info">
+      <h2>{{ selected()?.name || 'Project' }} source records</h2>
+      <div class="activity-list">
+        @for (point of selected()?.trend || []; track point.date) {
+          <div class="activity-row">
+            <span class="status-dot"></span
+            ><span
+              ><strong>{{ point.progress }}% reported progress</strong
+              ><small>{{ point.workers }} workers reported present</small></span
+            ><time>{{ point.date | date: 'mediumDate' : 'UTC' }}</time>
+          </div>
+        } @empty {
+          <p>No site-report observations exist in the selected period.</p>
+        }
+      </div>
+    </article>
+    <article class="panel project-info">
+      <h2>Provider status</h2>
+      @if (weather(); as weather) {
+        <div class="notice">
+          <strong>{{ weather.label }}</strong>
+          <p>
+            {{ weather.location }} · {{ weather.condition }} · {{ weather.temperatureC }}°C ·
+            {{ weather.rainChancePercent }}% rain chance
+          </p>
+          <small>{{ weather.note }}</small>
+        </div>
+      }
+      @if (cameras(); as cameras) {
+        <div class="notice">
+          <strong>{{ cameras.label }}</strong>
+          <p>{{ cameras.note }}</p>
+        </div>
+      }
+    </article>
+  </section>
+
+  <section class="panel project-info methodology-panel">
+    <h2>How these metrics are calculated</h2>
+    <dl class="details-list">
+      <div>
+        <dt>Progress</dt>
+        <dd>{{ d.methodology.progress }}</dd>
+      </div>
+      <div>
+        <dt>Risk</dt>
+        <dd>{{ d.methodology.risk }}</dd>
+      </div>
+      <div>
+        <dt>Finance</dt>
+        <dd>{{ d.methodology.finance }}</dd>
+      </div>
+      <div>
+        <dt>Resources</dt>
+        <dd>{{ d.methodology.resources }}</dd>
+      </div>
+      <div>
+        <dt>Procurement</dt>
+        <dd>{{ d.methodology.procurement }}</dd>
+      </div>
+    </dl>
+  </section>
+}
