@@ -8,7 +8,7 @@
       @if (sidebarOpen()) {
         <div class="brand-text">
           <span class="brand-name">BuildTrack</span>
-          <span class="brand-sub">Milestone 1</span>
+          <span class="brand-sub">Construction PM</span>
         </div>
       }
     </div>
@@ -27,7 +27,10 @@
         >
           <mat-icon>{{ item.icon }}</mat-icon>
           @if (sidebarOpen()) {
-            <span>{{ item.label }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          }
+          @if (item.path === '/notifications' && notifications.unread() > 0) {
+            <span class="nav-badge">{{ notifications.unread() > 99 ? '99+' : notifications.unread() }}</span>
           }
         </a>
       }
@@ -50,7 +53,7 @@
       </div>
 
       <div class="topbar-right">
-        <mat-icon class="bell">notifications</mat-icon>
+        <a routerLink="/notifications" class="bell-link" title="Notifications"><mat-icon class="bell">notifications</mat-icon>@if (notifications.unread() > 0) {<span class="bell-dot">{{ notifications.unread() > 9 ? "9+" : notifications.unread() }}</span>}</a>
         <div class="user-chip">
           <div class="avatar">{{ initials() }}</div>
           <div class="user-meta">

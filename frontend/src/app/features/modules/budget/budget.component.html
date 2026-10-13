@@ -1,0 +1,114 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Budget &amp; Costs</h2>
+      <p class="page-subtitle">Planned budget versus actual spend, by project and by cost category.</p>
+    </div>
+    <span class="badge-pill">Budget management</span>
+  </div>
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>savings</mat-icon> Project budgets</h3>
+    @if (overview().length === 0) {
+      <div class="empty-state">No projects yet.</div>
+    } @else {
+      <div class="budget-grid">
+        @for (o of overview(); track o.project_id) {
+          <div class="budget-card">
+            <div class="budget-top">
+              <strong>{{ o.project_name }}</strong>
+              <span class="status-chip" [ngClass]="o.status">{{ o.status }}</span>
+            </div>
+            <div class="bar"><div class="bar-fill" [ngClass]="barClass(o.utilisation_pct)" [style.width.%]="o.utilisation_pct > 100 ? 100 : o.utilisation_pct"></div></div>
+            <div class="budget-numbers">
+              <span>Spent <b>₹{{ o.spent | number:'1.0-0' }}</b></span>
+              <span>{{ o.utilisation_pct }}%</span>
+              <span>Budget <b>₹{{ o.budget | number:'1.0-0' }}</b></span>
+            </div>
+            <div class="budget-remaining" [class.over]="o.remaining < 0">
+              {{ o.remaining < 0 ? 'Over budget by ₹' + (-o.remaining | number:'1.0-0') : '₹' + (o.remaining | number:'1.0-0') + ' remaining' }}
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <div class="two-col">
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>bar_chart</mat-icon> Budget vs spent</h3>
+      <app-chart type="bar" [labels]="budgetLabels()" [series]="budgetSeries()" [currency]="true" />
+    </section>
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>donut_large</mat-icon> Spend by category</h3>
+      <app-chart type="doughnut" [labels]="categoryLabels()" [series]="categorySeries()" [currency]="true" />
+    </section>
+  </div>
+
+  @if (canManage) {
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>add_card</mat-icon> Record an expense</h3>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Project</mat-label>
+          <mat-select formControlName="project_id">
+            @for (p of projects(); track p.id) { <mat-option [value]="p.id">{{ p.name }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="category">
+            @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Amount (₹)</mat-label>
+          <input matInput type="number" min="1" formControlName="amount" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <input matInput type="date" formControlName="expense_date" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Description</mat-label>
+          <input matInput formControlName="description" />
+        </mat-form-field>
+        <button mat-raised-button class="btn-grad" type="submit"><mat-icon>add</mat-icon> Add</button>
+      </form>
+      @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+    </section>
+  }
+
+  <section class="panel">
+    <div class="panel-row">
+      <h3 class="panel-title"><mat-icon>receipt_long</mat-icon> Expense ledger</h3>
+      <select class="form-select form-select-sm" style="max-width:240px" (change)="onFilterChange($any($event.target).value)">
+        <option value="">All projects</option>
+        @for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+      </select>
+    </div>
+    @if (visibleExpenses().length === 0) {
+      <div class="empty-state">No expenses recorded.</div>
+    } @else {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Project</th><th>Category</th><th>Description</th><th>Amount</th>@if (canManage) {<th></th>}</tr></thead>
+          <tbody>
+            @for (e of visibleExpenses(); track e.id) {
+              <tr>
+                <td>{{ e.expense_date | date:'mediumDate' }}</td>
+                <td>{{ projectName(e.project_id) }}</td>
+                <td>{{ e.category }}</td>
+                <td>{{ e.description || '—' }}</td>
+                <td>₹{{ e.amount | number:'1.0-0' }}</td>
+                @if (canManage) {
+                  <td class="actions"><button mat-icon-button color="warn" (click)="remove(e)"><mat-icon>delete</mat-icon></button></td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

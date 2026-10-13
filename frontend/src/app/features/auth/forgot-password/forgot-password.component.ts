@@ -52,16 +52,16 @@ export class ForgotPasswordComponent {
     this.authService.forgotPassword(email).subscribe({
       next: (res) => {
         this.loading.set(false);
-        // In production, this token is emailed to the user rather than
-        // shown here — displayed only so the reset flow can be demoed
-        // without an SMTP/email service configured.
-        this.infoMessage.set(
-          'A reset link has been generated. Redirecting you to reset your password...'
-        );
+        if (res.email_sent || !res.reset_token) {
+          // Production behaviour: the link was emailed, nothing else to do here.
+          this.infoMessage.set('If that email is registered, a reset link has been sent. Please check your inbox.');
+          return;
+        }
+        // Development behaviour (no SMTP configured): continue straight to the reset page.
+        this.infoMessage.set('Email service is not configured (development mode). Redirecting you to reset your password...');
+        const token = res.reset_token;
         setTimeout(() => {
-          this.router.navigate(['/reset-password'], {
-            queryParams: { token: res.reset_token },
-          });
+          this.router.navigate(['/reset-password'], { queryParams: { token } });
         }, 1500);
       },
       error: (err) => {

@@ -1,0 +1,45 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">User Management</h2>
+      <p class="page-subtitle">Administrators can change roles and enable or disable accounts.</p>
+    </div>
+    <span class="badge-pill">Admin only</span>
+  </div>
+
+  @if (errorMessage()) { <div class="alert alert-danger py-2">{{ errorMessage() }}</div> }
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>manage_accounts</mat-icon> All users ({{ users().length }})</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (u of users(); track u.id) {
+            <tr>
+              <td>{{ u.full_name }} @if (isSelf(u)) { <span class="status-chip planned">you</span> }</td>
+              <td>{{ u.email }}</td>
+              <td>
+                <select class="form-select form-select-sm" style="width:auto" [disabled]="isSelf(u)"
+                  (change)="changeRole(u, $any($event.target).value)">
+                  @for (r of roles; track r) { <option [value]="r" [selected]="r === u.role">{{ r }}</option> }
+                </select>
+              </td>
+              <td>
+                <span class="status-chip" [ngClass]="u.is_active ? 'available' : 'rejected'">
+                  {{ u.is_active ? 'Active' : 'Disabled' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm" [ngClass]="u.is_active ? 'btn-outline-danger' : 'btn-outline-success'"
+                  [disabled]="isSelf(u)" (click)="toggleActive(u)">
+                  {{ u.is_active ? 'Disable' : 'Enable' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

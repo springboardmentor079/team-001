@@ -1,5 +1,6 @@
-import { Component, computed } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -24,12 +25,59 @@ const ROLE_ACCESS: Record<string, string[]> = {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css',
 })
 export class ProfileComponent {
-  constructor(public authService: AuthService) {}
+  nameMessage = signal<string | null>(null);
+  nameError = signal<string | null>(null);
+  pwMessage = signal<string | null>(null);
+  pwError = signal<string | null>(null);
+  nameForm: any;
+  pwForm: any;
+
+  constructor(public authService: AuthService, private fb: FormBuilder) {
+    this.nameForm = this.fb.group({
+      full_name: [this.authService.currentUser()?.full_name ?? '', [Validators.required, Validators.minLength(2)]],
+    });
+    this.pwForm = this.fb.group({
+      current_password: ['', [Validators.required]],
+      new_password: ['', [Validators.required, Validators.minLength(6)]],
+      confirm: ['', [Validators.required]],
+    });
+  }
+
+  saveName(): void {
+    if (this.nameForm.invalid) return;
+    this.nameMessage.set(null);
+    this.nameError.set(null);
+    this.authService.updateProfile(this.nameForm.getRawValue().full_name).subscribe({
+      next: () => this.nameMessage.set('Name updated.'),
+      error: (err) => this.nameError.set(err?.error?.detail?.[0]?.msg || err?.error?.detail || 'Could not update name.'),
+    });
+  }
+
+  savePassword(): void {
+    this.pwMessage.set(null);
+    this.pwError.set(null);
+    if (this.pwForm.invalid) {
+      this.pwForm.markAllAsTouched();
+      return;
+    }
+    const v = this.pwForm.getRawValue();
+    if (v.new_password !== v.confirm) {
+      this.pwError.set('New passwords do not match.');
+      return;
+    }
+    this.authService.changePassword(v.current_password, v.new_password).subscribe({
+      next: () => {
+        this.pwMessage.set('Password changed successfully.');
+        this.pwForm.reset({ current_password: '', new_password: '', confirm: '' });
+      },
+      error: (err) => this.pwError.set(err?.error?.detail?.[0]?.msg || err?.error?.detail || 'Could not change password.'),
+    });
+  }
 
   user = computed(() => this.authService.currentUser());
 

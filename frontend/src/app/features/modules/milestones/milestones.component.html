@@ -1,0 +1,84 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Milestones &amp; Progress</h2>
+      <p class="page-subtitle">Track site progress against planned milestones per project.</p>
+    </div>
+    <span class="badge-pill">Milestone 2</span>
+  </div>
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>business</mat-icon> Select a project</h3>
+    @if (projects().length === 0) {
+      <div class="empty-state">No projects yet — create one in the Projects tab first.</div>
+    } @else {
+      <select class="form-select" style="max-width:320px"
+        (change)="onProjectSelect($any($event.target).value)">
+        <option value="" disabled selected>Choose a project…</option>
+        @for (p of projects(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    }
+  </section>
+
+  @if (selectedProjectId()) {
+    @if (canManage) {
+      <section class="panel">
+        <h3 class="panel-title"><mat-icon>add_task</mat-icon> Add milestone</h3>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Title</mat-label>
+            <input matInput formControlName="title" placeholder="e.g. Foundation work" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="category">
+              @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Due date</mat-label>
+            <input matInput type="date" formControlName="due_date" />
+          </mat-form-field>
+          <button mat-raised-button class="btn-grad" type="submit">
+            <mat-icon>add</mat-icon> Add
+          </button>
+        </form>
+        @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+      </section>
+    }
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>timeline</mat-icon> Milestones · {{ completion() }}% complete</h3>
+      <div class="bar" style="margin-bottom:14px"><div class="bar-fill ok" [style.width.%]="completion()"></div></div>
+      @if (milestones().length === 0) {
+        <div class="empty-state">No milestones for this project yet.</div>
+      } @else {
+        <table class="data-table">
+          <thead><tr><th>Title</th><th>Category</th><th>Due</th><th>Status</th>@if (canManage) {<th>Update</th>}</tr></thead>
+          <tbody>
+            @for (m of milestones(); track m.id) {
+              <tr>
+                <td>{{ m.title }}</td>
+                <td>{{ m.category || '—' }}</td>
+                <td [class.text-danger]="isOverdue(m)">{{ m.due_date ? (m.due_date | date:'mediumDate') : '—' }} @if (isOverdue(m)) { <span class="small">overdue</span> }</td>
+                <td><span class="status-chip" [ngClass]="m.status">{{ m.status }}</span></td>
+                @if (canManage) {
+                  <td>
+                    <select class="form-select form-select-sm" style="width:auto;display:inline-block"
+                      (change)="onStatusChange(m.id, $any($event.target).value)">
+                      @for (s of statuses; track s) {
+                        <option [value]="s" [selected]="s === m.status">{{ s }}</option>
+                      }
+                    </select>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</div>

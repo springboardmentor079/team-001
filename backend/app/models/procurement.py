@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
-from sqlalchemy.sql import func
+from sqlalchemy import Boolean, Column, Integer, String, Numeric, DateTime, ForeignKey
+from sqlalchemy.sql import expression, func
 
 from app.database.base import Base
 
@@ -13,8 +13,11 @@ class Procurement(Base):
     # raw_materials | equipment | machinery | safety_equipment | office_supplies
     category = Column(String(30), nullable=False)
     vendor_name = Column(String(120))
+    requested_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     quantity = Column(Numeric(12, 2), default=0)
     cost = Column(Numeric(14, 2), default=0)
     # requested | approved | ordered | delivered | rejected
     status = Column(String(20), default="requested")
+    invoice_number = Column(String(60), nullable=True)
+    invoice_paid = Column(Boolean, default=False, nullable=False, server_default=expression.false())
     created_at = Column(DateTime(timezone=True), server_default=func.now())

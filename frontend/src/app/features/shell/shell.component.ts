@@ -1,9 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 interface NavItem {
   path: string;
@@ -51,13 +53,25 @@ const NAV_ITEMS: NavItem[] = [
     path: '/workforce',
     icon: 'groups',
     label: 'Workforce',
-    roles: ['admin', 'project_manager', 'contractor'],
+    roles: ['admin', 'project_manager', 'contractor', 'site_engineer'],
   },
   {
     path: '/procurement',
     icon: 'shopping_cart',
     label: 'Procurement',
     roles: ['admin', 'project_manager', 'contractor'],
+  },
+  {
+    path: '/budget',
+    icon: 'account_balance_wallet',
+    label: 'Budget',
+    roles: ['admin', 'project_manager', 'client'],
+  },
+  {
+    path: '/documents',
+    icon: 'folder_open',
+    label: 'Documents',
+    roles: ALL_ROLES,
   },
   {
     path: '/notifications',
@@ -71,6 +85,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Reports',
     roles: ['admin', 'project_manager', 'client'],
   },
+  { path: '/users', icon: 'manage_accounts', label: 'Users', roles: ['admin'] },
   { path: '/profile', icon: 'person', label: 'Profile', roles: ALL_ROLES },
 ];
 
@@ -97,10 +112,32 @@ const ROLE_LABELS: Record<string, string> = {
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit, OnDestroy {
   sidebarOpen = signal(true);
+  private subs = new Subscription();
+  private timer?: ReturnType<typeof setInterval>;
 
-  constructor(public authService: AuthService, private router: Router) {}
+  constructor(
+    public authService: AuthService,
+    public notifications: NotificationService,
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    this.notifications.refreshUnread();
+    // Refresh the badge after every navigation and once a minute.
+    this.subs.add(
+      this.router.events
+        .pipe(filter((e) => e instanceof NavigationEnd))
+        .subscribe(() => this.notifications.refreshUnread())
+    );
+    this.timer = setInterval(() => this.notifications.refreshUnread(), 60000);
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+    if (this.timer) clearInterval(this.timer);
+  }
 
   /** Only show nav items this user's role is allowed to see */
   navItems = computed<NavItem[]>(() => {

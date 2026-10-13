@@ -1,0 +1,65 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Machinery &amp; Resources</h2>
+      <p class="page-subtitle">Allocate equipment and machinery and monitor utilisation.</p>
+    </div>
+    <span class="badge-pill">{{ utilisation() }}% in use</span>
+  </div>
+
+  @if (canManage) {
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>add</mat-icon> Add resource</h3>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" placeholder="e.g. Excavator #3" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="category">
+            @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <button mat-raised-button class="btn-grad" type="submit">
+          <mat-icon>add</mat-icon> Add
+        </button>
+      </form>
+      @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+    </section>
+  }
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>precision_manufacturing</mat-icon> All resources</h3>
+    @if (resources().length === 0) {
+      <div class="empty-state">No resources added yet.</div>
+    } @else {
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Category</th><th>Assigned project</th><th>Status</th></tr></thead>
+        <tbody>
+          @for (r of resources(); track r.id) {
+            <tr>
+              <td>{{ r.name }}</td>
+              <td>{{ r.category }}</td>
+              <td>
+                @if (canManage) {
+                  <select class="form-select form-select-sm" style="width:auto" (change)="assign(r, $any($event.target).value)">
+                    <option value="">Unassigned</option>
+                    @for (p of projects(); track p.id) { <option [value]="p.id" [selected]="p.id === r.project_id">{{ p.name }}</option> }
+                  </select>
+                } @else { {{ projectName(r.project_id) }} }
+              </td>
+              <td>
+                @if (canManage) {
+                  <select class="form-select form-select-sm" style="width:auto" (change)="changeStatus(r, $any($event.target).value)">
+                    @for (s of statuses; track s) { <option [value]="s" [selected]="s === r.status">{{ s }}</option> }
+                  </select>
+                } @else { <span class="status-chip" [ngClass]="r.status">{{ r.status }}</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

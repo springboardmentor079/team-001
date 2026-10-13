@@ -1,0 +1,79 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Notifications</h2>
+      <p class="page-subtitle">Deadlines, low stock, procurement decisions, attendance and budget alerts for your account.</p>
+    </div>
+    <span class="badge-pill">{{ unreadCount() }} unread</span>
+  </div>
+
+  @if (info()) { <div class="alert alert-success py-2">{{ info() }}</div> }
+  @if (error()) { <div class="alert alert-danger py-2">{{ error() }}</div> }
+
+  @if (canSend) {
+    <section class="panel">
+      <div class="panel-row">
+        <h3 class="panel-title"><mat-icon>send</mat-icon> Send a notification</h3>
+        <button class="btn btn-sm btn-outline-primary" (click)="runAlertCheck()" title="Scans milestones and stock levels">
+          <mat-icon style="font-size:16px;height:16px;width:16px;vertical-align:middle">radar</mat-icon> Run alert check
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="send()" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Recipient</mat-label>
+          <mat-select formControlName="user_id">
+            @for (u of directory(); track u.id) { <mat-option [value]="u.id">{{ u.full_name }} ({{ u.role }})</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Type</mat-label>
+          <mat-select formControlName="type">
+            @for (t of types; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Message</mat-label>
+          <input matInput formControlName="message" />
+        </mat-form-field>
+        <button mat-raised-button class="btn-grad" type="submit"><mat-icon>send</mat-icon> Send</button>
+      </form>
+      <p class="hint">Most notifications are created automatically — new procurement requests, delayed milestones, low stock, absent workers and budget over 90%.</p>
+    </section>
+  }
+
+  <section class="panel">
+    <div class="panel-row">
+      <div class="tabs inline">
+        <button class="tab" [class.active]="filter() === 'all'" (click)="filter.set('all')">All</button>
+        <button class="tab" [class.active]="filter() === 'unread'" (click)="filter.set('unread')">Unread</button>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="markAll()" [disabled]="unreadCount() === 0">
+        <mat-icon style="font-size:16px;height:16px;width:16px;vertical-align:middle">done_all</mat-icon> Mark all as read
+      </button>
+    </div>
+
+    @if (visible().length === 0) {
+      <div class="empty-state">
+        {{ filter() === 'unread' ? "You're all caught up." : 'No notifications yet — they appear here automatically as things happen on your projects.' }}
+      </div>
+    } @else {
+      <ul class="notif-list">
+        @for (n of visible(); track n.id) {
+          <li [class.unread]="!n.is_read">
+            <mat-icon class="notif-icon">{{ icon(n.type) }}</mat-icon>
+            <div class="notif-body">
+              <div class="notif-title">{{ n.title }} <span class="status-chip closed">{{ n.type }}</span></div>
+              @if (n.message) { <div class="notif-msg">{{ n.message }}</div> }
+              <div class="notif-time">{{ n.created_at | date:'medium' }}</div>
+            </div>
+            @if (!n.is_read) { <button mat-button (click)="markRead(n.id)">Mark read</button> }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

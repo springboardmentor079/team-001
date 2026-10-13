@@ -1,0 +1,174 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Procurement</h2>
+      <p class="page-subtitle">Purchase requests, approvals, vendors and invoice tracking.</p>
+    </div>
+    @if (unpaidTotal() > 0) {
+      <span class="badge-pill badge-danger">₹{{ unpaidTotal() | number:'1.0-0' }} unpaid invoices</span>
+    } @else {
+      <span class="badge-pill">{{ requests().length }} requests</span>
+    }
+  </div>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="tab() === 'requests'" (click)="tab.set('requests')"><mat-icon>shopping_cart</mat-icon> Requests</button>
+    <button class="tab" [class.active]="tab() === 'vendors'" (click)="tab.set('vendors'); fetchVendors()"><mat-icon>storefront</mat-icon> Vendors</button>
+  </div>
+
+  @if (tab() === 'requests') {
+    @if (canManage) {
+      <section class="panel">
+        <h3 class="panel-title"><mat-icon>add_shopping_cart</mat-icon> New request</h3>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Item</mat-label>
+            <input matInput formControlName="item_name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="category">
+              @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Vendor</mat-label>
+            <mat-select formControlName="vendor_name">
+              <mat-option value="">— none —</mat-option>
+              @for (v of vendors(); track v.id) { <mat-option [value]="v.name">{{ v.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Quantity</mat-label>
+            <input matInput type="number" formControlName="quantity" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Cost (₹)</mat-label>
+            <input matInput type="number" formControlName="cost" />
+          </mat-form-field>
+          <button mat-raised-button class="btn-grad" type="submit"><mat-icon>add</mat-icon> Request</button>
+        </form>
+        @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+      </section>
+    }
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>shopping_cart</mat-icon> All requests</h3>
+      @if (requests().length === 0) {
+        <div class="empty-state">No procurement requests yet.</div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Item</th><th>Vendor</th><th>Qty</th><th>Cost</th><th>Status</th><th>Invoice</th>@if (canUpdateStatus) {<th>Update status</th>}</tr>
+            </thead>
+            <tbody>
+              @for (r of requests(); track r.id) {
+                <tr>
+                  <td>{{ r.item_name }}</td>
+                  <td>{{ r.vendor_name || '—' }}</td>
+                  <td>{{ r.quantity }}</td>
+                  <td>₹{{ r.cost | number }}</td>
+                  <td><span class="status-chip" [ngClass]="r.status">{{ r.status }}</span></td>
+                  <td>
+                    @if (canUpdateStatus) {
+                      <input class="form-control form-control-sm invoice-input" placeholder="Invoice no." [value]="r.invoice_number || ''"
+                        (change)="saveInvoiceNumber(r, $any($event.target).value)" />
+                      @if (r.invoice_number) {
+                        <label class="paid-toggle">
+                          <input type="checkbox" [checked]="r.invoice_paid" (change)="togglePaid(r)" /> Paid
+                        </label>
+                      }
+                    } @else {
+                      @if (r.invoice_number) {
+                        {{ r.invoice_number }}
+                        <span class="status-chip" [ngClass]="r.invoice_paid ? 'available' : 'pending'">{{ r.invoice_paid ? 'Paid' : 'Unpaid' }}</span>
+                      } @else { — }
+                    }
+                  </td>
+                  @if (canUpdateStatus) {
+                    <td>
+                      <select class="form-select form-select-sm" style="width:auto;display:inline-block"
+                        (change)="onStatusChange(r.id, $any($event.target).value)">
+                        @for (s of statuses; track s) { <option [value]="s" [selected]="s === r.status">{{ s }}</option> }
+                      </select>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (tab() === 'vendors') {
+    @if (canUpdateStatus) {
+      <section class="panel">
+        <h3 class="panel-title"><mat-icon>add_business</mat-icon> Add vendor / supplier</h3>
+        <form [formGroup]="vendorForm" (ngSubmit)="addVendor()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Vendor name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="category">
+              @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Contact person</mat-label>
+            <input matInput formControlName="contact_person" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Phone</mat-label>
+            <input matInput formControlName="phone" />
+          </mat-form-field>
+          <button mat-raised-button class="btn-grad" type="submit"><mat-icon>add</mat-icon> Add vendor</button>
+        </form>
+      </section>
+    }
+    @if (vendorError()) { <div class="alert alert-danger py-2">{{ vendorError() }}</div> }
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>storefront</mat-icon> Vendors ({{ vendors().length }})</h3>
+      @if (vendors().length === 0) {
+        <div class="empty-state">No vendors added yet.</div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Name</th><th>Category</th><th>Contact</th><th>Email / phone</th>@if (canUpdateStatus) {<th>Orders</th><th>Total spend</th><th>Unpaid invoices</th><th></th>}</tr>
+            </thead>
+            <tbody>
+              @for (v of vendors(); track v.id) {
+                <tr>
+                  <td>{{ v.name }}</td>
+                  <td>{{ v.category }}</td>
+                  <td>{{ v.contact_person || '—' }}</td>
+                  <td>{{ v.email || '—' }}<div class="muted small">{{ v.phone }}</div></td>
+                  @if (canUpdateStatus) {
+                    <td>{{ summaryFor(v.id)?.orders ?? 0 }}</td>
+                    <td>₹{{ summaryFor(v.id)?.total_cost ?? 0 | number:'1.0-0' }}</td>
+                    <td>
+                      @if ((summaryFor(v.id)?.unpaid_invoices ?? 0) > 0) {
+                        <span class="status-chip pending">{{ summaryFor(v.id)?.unpaid_invoices }} unpaid</span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td class="actions"><button mat-icon-button color="warn" (click)="removeVendor(v)"><mat-icon>delete</mat-icon></button></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</div>

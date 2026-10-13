@@ -1,0 +1,63 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Documents</h2>
+      <p class="page-subtitle">Drawings, permits, invoices and site files — stored securely and linked to projects.</p>
+    </div>
+    <span class="badge-pill">Document management</span>
+  </div>
+
+  @if (canUpload) {
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>upload_file</mat-icon> Upload a document</h3>
+      <div class="upload-row">
+        <input #fileInput type="file" class="form-control" (change)="onFileChange($event)" />
+        <select class="form-select" (change)="onProjectChange($any($event.target).value)">
+          <option value="">No project (general)</option>
+          @for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+        </select>
+        <button mat-raised-button class="btn-grad" (click)="upload(fileInput)" [disabled]="uploading()">
+          <mat-icon>cloud_upload</mat-icon> {{ uploading() ? 'Uploading…' : 'Upload' }}
+        </button>
+      </div>
+      <p class="hint">Allowed: PDF, Word, Excel, PowerPoint, CSV, TXT, PNG/JPG, DWG, ZIP · max 10 MB</p>
+      @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+      @if (successMessage()) { <div class="alert alert-success py-2 mt-2">{{ successMessage() }}</div> }
+    </section>
+  }
+
+  <section class="panel">
+    <div class="panel-row">
+      <h3 class="panel-title"><mat-icon>folder_open</mat-icon> All documents</h3>
+      <select class="form-select form-select-sm" style="max-width:240px" (change)="onFilterChange($any($event.target).value)">
+        <option value="">All projects</option>
+        @for (p of projects(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+      </select>
+    </div>
+    @if (visible().length === 0) {
+      <div class="empty-state">No documents here yet.</div>
+    } @else {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>File</th><th>Project</th><th>Size</th><th>Uploaded</th><th></th></tr></thead>
+          <tbody>
+            @for (d of visible(); track d.id) {
+              <tr>
+                <td><mat-icon class="file-icon">description</mat-icon> {{ d.filename }}</td>
+                <td>{{ projectName(d.project_id) }}</td>
+                <td>{{ formatBytes(d.size_bytes) }}</td>
+                <td>{{ d.created_at | date:'medium' }}</td>
+                <td class="actions">
+                  <button mat-icon-button title="Download" (click)="download(d)"><mat-icon>download</mat-icon></button>
+                  @if (canDelete(d)) {
+                    <button mat-icon-button color="warn" title="Delete" (click)="remove(d)"><mat-icon>delete</mat-icon></button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

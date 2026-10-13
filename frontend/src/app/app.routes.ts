@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -48,6 +49,8 @@ export const routes: Routes = [
       },
       {
         path: 'projects',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'site_engineer', 'contractor', 'client'] },
         loadComponent: () =>
           import('./features/modules/projects/projects.component').then(
             (m) => m.ProjectsComponent
@@ -55,6 +58,8 @@ export const routes: Routes = [
       },
       {
         path: 'milestones',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'site_engineer', 'client'] },
         loadComponent: () =>
           import('./features/modules/milestones/milestones.component').then(
             (m) => m.MilestonesComponent
@@ -62,6 +67,8 @@ export const routes: Routes = [
       },
       {
         path: 'resources',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'site_engineer'] },
         loadComponent: () =>
           import('./features/modules/resources/resources.component').then(
             (m) => m.ResourcesComponent
@@ -69,6 +76,8 @@ export const routes: Routes = [
       },
       {
         path: 'inventory',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'site_engineer', 'contractor'] },
         loadComponent: () =>
           import('./features/modules/inventory/inventory.component').then(
             (m) => m.InventoryComponent
@@ -76,6 +85,8 @@ export const routes: Routes = [
       },
       {
         path: 'workforce',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'contractor', 'site_engineer'] },
         loadComponent: () =>
           import('./features/modules/workforce/workforce.component').then(
             (m) => m.WorkforceComponent
@@ -83,6 +94,8 @@ export const routes: Routes = [
       },
       {
         path: 'procurement',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'contractor'] },
         loadComponent: () =>
           import('./features/modules/procurement/procurement.component').then(
             (m) => m.ProcurementComponent
@@ -97,10 +110,31 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'client'] },
         loadComponent: () =>
           import('./features/modules/reports/reports.component').then(
             (m) => m.ReportsComponent
           ),
+      },
+      {
+        path: 'budget',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'project_manager', 'client'] },
+        loadComponent: () =>
+          import('./features/modules/budget/budget.component').then((m) => m.BudgetComponent),
+      },
+      {
+        path: 'documents',
+        loadComponent: () =>
+          import('./features/modules/documents/documents.component').then((m) => m.DocumentsComponent),
+      },
+      {
+        path: 'users',
+        canActivate: [roleGuard],
+        data: { roles: ['admin'] },
+        loadComponent: () =>
+          import('./features/modules/users/users.component').then((m) => m.UsersComponent),
       },
       {
         path: 'profile',

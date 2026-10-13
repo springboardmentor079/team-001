@@ -2,7 +2,7 @@
   <div class="page-head">
     <div>
       <h2 class="title">My Profile</h2>
-      <p class="subtitle">Your account details, read straight from the JWT-protected API.</p>
+      <p class="subtitle">Your account details, plus options to update your name and password.</p>
     </div>
     <span class="badge-pill">Live data</span>
   </div>
@@ -52,6 +52,33 @@
         <span>Token expiry</span>
         <span class="val">60 minutes</span>
       </div>
+    </section>
+  </div>
+
+  <div class="profile-grid" style="margin-top:16px">
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>edit</mat-icon> Edit profile</h3>
+      <form [formGroup]="nameForm" (ngSubmit)="saveName()">
+        <label class="form-label small">Full name</label>
+        <input class="form-control mb-2" formControlName="full_name" />
+        @if (nameMessage()) { <div class="alert alert-success py-2">{{ nameMessage() }}</div> }
+        @if (nameError()) { <div class="alert alert-danger py-2">{{ nameError() }}</div> }
+        <button class="btn btn-primary" type="submit" [disabled]="nameForm.invalid">Save name</button>
+      </form>
+    </section>
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>lock_reset</mat-icon> Change password</h3>
+      <form [formGroup]="pwForm" (ngSubmit)="savePassword()">
+        <label class="form-label small">Current password</label>
+        <input type="password" class="form-control mb-2" formControlName="current_password" />
+        <label class="form-label small">New password (min 6 characters)</label>
+        <input type="password" class="form-control mb-2" formControlName="new_password" />
+        <label class="form-label small">Confirm new password</label>
+        <input type="password" class="form-control mb-2" formControlName="confirm" />
+        @if (pwMessage()) { <div class="alert alert-success py-2">{{ pwMessage() }}</div> }
+        @if (pwError()) { <div class="alert alert-danger py-2">{{ pwError() }}</div> }
+        <button class="btn btn-primary" type="submit">Update password</button>
+      </form>
     </section>
   </div>
 </div>

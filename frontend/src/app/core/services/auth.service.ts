@@ -8,6 +8,7 @@ import {
   SignupRequest,
   User,
 } from '../models/user.model';
+import { ForgotPasswordResult } from '../models/domain.model';
 
 const TOKEN_KEY = 'buildtrack_token';
 const USER_KEY = 'buildtrack_user';
@@ -41,11 +42,24 @@ export class AuthService {
     this.currentUser.set(null);
   }
 
-  forgotPassword(email: string): Observable<{ message: string; reset_token: string }> {
-    return this.http.post<{ message: string; reset_token: string }>(
-      `${environment.apiUrl}/auth/forgot-password`,
-      { email }
+  forgotPassword(email: string): Observable<ForgotPasswordResult> {
+    return this.http.post<ForgotPasswordResult>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  updateProfile(full_name: string): Observable<User> {
+    return this.http.patch<User>(`${environment.apiUrl}/auth/me`, { full_name }).pipe(
+      tap((user) => {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        this.currentUser.set(user);
+      })
     );
+  }
+
+  changePassword(current_password: string, new_password: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/change-password`, {
+      current_password,
+      new_password,
+    });
   }
 
   resetPassword(resetToken: string, newPassword: string): Observable<{ message: string }> {

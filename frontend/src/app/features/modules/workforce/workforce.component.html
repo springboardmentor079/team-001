@@ -1,0 +1,278 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Workforce &amp; Attendance</h2>
+      <p class="page-subtitle">Register workers, mark daily attendance and review the history.</p>
+    </div>
+    <span class="badge-pill">{{ workers().length }} workers</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="tab() === 'workers'" (click)="tab.set('workers')">
+      <mat-icon>groups</mat-icon> Workers
+    </button>
+    <button class="tab" [class.active]="tab() === 'attendance'" (click)="tab.set('attendance')">
+      <mat-icon>event_available</mat-icon> Attendance
+    </button>
+    <button class="tab" [class.active]="tab() === 'shifts'" (click)="tab.set('shifts')">
+      <mat-icon>schedule</mat-icon> Shifts
+    </button>
+    @if (canViewPayroll) {
+      <button class="tab" [class.active]="tab() === 'payroll'" (click)="openPayroll()">
+        <mat-icon>payments</mat-icon> Payroll
+      </button>
+    }
+  </div>
+
+  @if (tab() === 'workers') {
+    @if (canManageWorkers) {
+      <section class="panel">
+        <h3 class="panel-title"><mat-icon>person_add</mat-icon> Register worker</h3>
+        <form [formGroup]="form" (ngSubmit)="addWorker()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Full name</mat-label>
+            <input matInput formControlName="full_name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="category">
+              @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Assigned project</mat-label>
+            <mat-select formControlName="project_id">
+              <mat-option [value]="null">None</mat-option>
+              @for (p of projects(); track p.id) { <mat-option [value]="p.id">{{ p.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Contact number</mat-label>
+            <input matInput formControlName="contact_number" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Daily wage (₹)</mat-label>
+            <input matInput type="number" formControlName="daily_wage" />
+          </mat-form-field>
+          <button mat-raised-button class="btn-grad" type="submit"><mat-icon>add</mat-icon> Add worker</button>
+        </form>
+        @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+      </section>
+    }
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>groups</mat-icon> All workers</h3>
+      @if (workers().length === 0) {
+        <div class="empty-state">No workers registered yet.</div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Category</th><th>Project</th><th>Contact</th><th>Daily wage</th>@if (canManageWorkers) {<th></th>}</tr></thead>
+            <tbody>
+              @for (w of workers(); track w.id) {
+                <tr>
+                  <td>{{ w.full_name }}</td>
+                  <td>{{ w.category }}</td>
+                  <td>{{ projectName(w.project_id) }}</td>
+                  <td>{{ w.contact_number || '—' }}</td>
+                  <td>₹{{ w.daily_wage | number }}</td>
+                  @if (canManageWorkers) {
+                    <td class="actions"><button mat-icon-button color="warn" (click)="removeWorker(w)"><mat-icon>delete</mat-icon></button></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (tab() === 'attendance') {
+    <section class="panel">
+      <div class="panel-row">
+        <h3 class="panel-title"><mat-icon>fact_check</mat-icon> Daily roster</h3>
+        <div class="roster-controls">
+          <input type="date" class="form-control form-control-sm" [value]="attendanceDate()" (change)="onDateChange($any($event.target).value)" />
+          <span class="badge-pill">{{ presentToday() }} present</span>
+        </div>
+      </div>
+      @if (attendanceMessage()) { <div class="alert alert-info py-2">{{ attendanceMessage() }}</div> }
+      @if (workers().length === 0) {
+        <div class="empty-state">Register workers first.</div>
+      } @else if (canMarkAttendance) {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Worker</th><th>Project</th><th>Status on this date</th><th>Mark</th></tr></thead>
+            <tbody>
+              @for (w of workers(); track w.id) {
+                <tr>
+                  <td>{{ w.full_name }}</td>
+                  <td>{{ projectName(w.project_id) }}</td>
+                  <td>
+                    @if (statusOn(w.id); as st) { <span class="status-chip" [ngClass]="st">{{ st }}</span> }
+                    @else { <span class="muted">not marked</span> }
+                  </td>
+                  <td class="mark-buttons">
+                    <button class="btn btn-sm btn-outline-success" (click)="quickMark(w, 'present')">Present</button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="quickMark(w, 'absent')">Absent</button>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="quickMark(w, 'half_day')">Half</button>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="quickMark(w, 'leave')">Leave</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    @if (canMarkAttendance) {
+      <section class="panel">
+        <h3 class="panel-title"><mat-icon>edit_calendar</mat-icon> Mark attendance for any date</h3>
+        <form [formGroup]="attendanceForm" (ngSubmit)="markAttendance()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Worker</mat-label>
+            <mat-select formControlName="worker_id" (selectionChange)="onWorkerSelected($event.value)">
+              @for (w of workers(); track w.id) { <mat-option [value]="w.id">{{ w.full_name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Project</mat-label>
+            <mat-select formControlName="project_id">
+              @for (p of projects(); track p.id) { <mat-option [value]="p.id">{{ p.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Date</mat-label>
+            <input matInput type="date" formControlName="date" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <button mat-raised-button class="btn-grad" type="submit"><mat-icon>save</mat-icon> Save</button>
+        </form>
+        <p class="hint">Saving the same worker and date again updates the record. Marking someone absent notifies the project manager.</p>
+      </section>
+    }
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>history</mat-icon> Recent attendance</h3>
+      @if (history().length === 0) {
+        <div class="empty-state">No attendance recorded yet.</div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Worker</th><th>Project</th><th>Status</th></tr></thead>
+            <tbody>
+              @for (a of history(); track a.id) {
+                <tr>
+                  <td>{{ a.date | date:'mediumDate' }}</td>
+                  <td>{{ workerName(a.worker_id) }}</td>
+                  <td>{{ projectName(a.project_id) }}</td>
+                  <td><span class="status-chip" [ngClass]="a.status">{{ a.status }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (tab() === 'shifts') {
+    <section class="panel">
+      <div class="panel-row">
+        <h3 class="panel-title"><mat-icon>calendar_view_week</mat-icon> Weekly shift schedule</h3>
+        <div class="roster-controls">
+          <button class="btn btn-sm btn-outline-secondary" (click)="moveWeek(-1)">‹ Prev</button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="thisWeek()">This week</button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="moveWeek(1)">Next ›</button>
+        </div>
+      </div>
+      <div class="shift-legend">
+        <span class="status-chip planned">Morning · {{ shiftCount('morning') }}</span>
+        <span class="status-chip in_progress">Evening · {{ shiftCount('evening') }}</span>
+        <span class="status-chip closed">Night · {{ shiftCount('night') }}</span>
+      </div>
+      @if (shiftMessage()) { <div class="alert alert-danger py-2">{{ shiftMessage() }}</div> }
+      @if (workers().length === 0) {
+        <div class="empty-state">Register workers first.</div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table shift-grid">
+            <thead>
+              <tr>
+                <th>Worker</th>
+                @for (d of weekDays(); track d) { <th>{{ dayLabel(d) }}</th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (w of workers(); track w.id) {
+                <tr>
+                  <td>{{ w.full_name }}</td>
+                  @for (d of weekDays(); track d) {
+                    <td>
+                      @if (canMarkAttendance) {
+                        <select class="form-select form-select-sm shift-select" [ngClass]="shiftFor(w.id, d)?.shift_type"
+                          (change)="onShiftChange(w, d, $any($event.target).value)">
+                          <option value="" [selected]="!shiftFor(w.id, d)">—</option>
+                          @for (t of shiftTypes; track t) {
+                            <option [value]="t" [selected]="shiftFor(w.id, d)?.shift_type === t">{{ t }}</option>
+                          }
+                        </select>
+                      } @else {
+                        {{ shiftFor(w.id, d)?.shift_type || '—' }}
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Choose a shift per worker per day. Re-selecting changes it; "—" clears it. One shift per worker per day.</p>
+      }
+    </section>
+  }
+
+  @if (tab() === 'payroll' && canViewPayroll) {
+    <section class="panel">
+      <div class="panel-row">
+        <h3 class="panel-title"><mat-icon>payments</mat-icon> Payroll</h3>
+        <div class="roster-controls">
+          <input type="date" class="form-control form-control-sm" [value]="payrollStart()" (change)="payrollStart.set($any($event.target).value)" />
+          <span>to</span>
+          <input type="date" class="form-control form-control-sm" [value]="payrollEnd()" (change)="payrollEnd.set($any($event.target).value)" />
+          <button class="btn btn-sm btn-primary" (click)="loadPayroll()">Calculate</button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="exportPayrollCsv()" [disabled]="!payroll()">Download CSV</button>
+        </div>
+      </div>
+      <p class="hint" style="margin:0 0 10px">Wages are calculated from attendance: present = 1 day, half day = 0.5, absent / leave = unpaid.</p>
+      @if (payrollError()) { <div class="alert alert-danger py-2">{{ payrollError() }}</div> }
+      @if (payroll(); as r) {
+        <div class="stat-mini-grid" style="margin-bottom:12px">
+          <div class="stat-mini"><div class="label">Total payable</div><div class="value">₹{{ r.total_amount | number:'1.0-0' }}</div></div>
+          <div class="stat-mini"><div class="label">Workers paid</div><div class="value">{{ r.lines.length }}</div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Worker</th><th>Category</th><th>Daily wage</th><th>Present</th><th>Half</th><th>Absent</th><th>Leave</th><th>Payable days</th><th>Amount</th></tr></thead>
+            <tbody>
+              @for (l of r.lines; track l.worker_id) {
+                <tr>
+                  <td>{{ l.worker_name }}</td><td>{{ l.category }}</td><td>₹{{ l.daily_wage | number:'1.0-0' }}</td>
+                  <td>{{ l.present_days }}</td><td>{{ l.half_days }}</td><td>{{ l.absent_days }}</td><td>{{ l.leave_days }}</td>
+                  <td>{{ l.payable_days }}</td><td><b>₹{{ l.amount | number:'1.0-0' }}</b></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</div>

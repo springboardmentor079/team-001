@@ -8,6 +8,10 @@ from app.models.attendance import Attendance
 from app.models.procurement import Procurement
 from app.models.notification import Notification
 from app.models.report import Report
+from app.models.document import Document
+from app.models.expense import Expense
+from app.models.shift import Shift
+from app.models.vendor import Vendor
 
 __all__ = [
     "User",
@@ -20,4 +24,8 @@ __all__ = [
     "Procurement",
     "Notification",
     "Report",
+    "Document",
+    "Expense",
+    "Shift",
+    "Vendor",
 ]

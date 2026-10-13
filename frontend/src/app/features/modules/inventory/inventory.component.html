@@ -1,0 +1,77 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2 class="page-title">Materials &amp; Inventory</h2>
+      <p class="page-subtitle">Monitor material stock levels, requests and allocation.</p>
+    </div>
+    <span class="badge-pill" [class.badge-danger]="lowCount() > 0">{{ lowCount() }} low stock</span>
+  </div>
+
+  @if (canManage) {
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>add_box</mat-icon> Add stock item</h3>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Material</mat-label>
+          <input matInput formControlName="material_name" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="category">
+            @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Quantity</mat-label>
+          <input matInput type="number" formControlName="quantity" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Unit</mat-label>
+          <input matInput formControlName="unit" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Reorder level</mat-label>
+          <input matInput type="number" formControlName="reorder_level" />
+        </mat-form-field>
+        <button mat-raised-button class="btn-grad" type="submit">
+          <mat-icon>add</mat-icon> Add
+        </button>
+      </form>
+      @if (errorMessage()) { <div class="alert alert-danger py-2 mt-2">{{ errorMessage() }}</div> }
+    </section>
+  }
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>inventory_2</mat-icon> Stock levels</h3>
+    @if (items().length === 0) {
+      <div class="empty-state">No inventory recorded yet.</div>
+    } @else {
+      <table class="data-table">
+        <thead><tr><th>Material</th><th>Category</th><th>Quantity</th><th>Reorder level</th><th>Status</th></tr></thead>
+        <tbody>
+          @for (i of items(); track i.id) {
+            <tr>
+              <td>{{ i.material_name }}</td>
+              <td>{{ i.category }}</td>
+              <td>
+                @if (canManage) {
+                  <input type="number" min="0" class="form-control form-control-sm qty-input" [value]="i.quantity"
+                    (change)="restock(i, $any($event.target).value)" title="Edit quantity and press Tab/Enter to save" />
+                  {{ i.unit }}
+                } @else { {{ i.quantity }} {{ i.unit }} }
+              </td>
+              <td>{{ i.reorder_level }} {{ i.unit }}</td>
+              <td>
+                @if (isLow(i)) {
+                  <span class="status-chip on_hold">Low stock</span>
+                } @else {
+                  <span class="status-chip available">OK</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

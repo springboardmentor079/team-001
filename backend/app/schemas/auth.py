@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Literal
+from typing import Literal, Optional
 
 Role = Literal[
     "admin", "project_manager", "site_engineer", "contractor", "worker", "client"
@@ -41,11 +41,35 @@ class ForgotPasswordRequest(BaseModel):
 
 class ForgotPasswordResponse(BaseModel):
     message: str
-    # In production this would be emailed, not returned in the response.
-    # Returned here only so the reset flow can be demoed without an SMTP setup.
-    reset_token: str
+    # Only present in development mode (SMTP not configured). When an email
+    # service is configured the token is emailed and never returned here.
+    reset_token: Optional[str] = None
+    email_sent: bool = False
 
 
 class ResetPasswordRequest(BaseModel):
     reset_token: str
     new_password: str = Field(min_length=6)
+
+
+class ProfileUpdate(BaseModel):
+    full_name: str = Field(min_length=2, max_length=120)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
+
+
+class UserAdminUpdate(BaseModel):
+    role: Optional[Role] = None
+    is_active: Optional[bool] = None
+
+
+class UserDirectoryEntry(BaseModel):
+    id: int
+    full_name: str
+    role: str
+
+    class Config:
+        from_attributes = True

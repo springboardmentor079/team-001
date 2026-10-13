@@ -1,8 +1,11 @@
-import { Component, computed } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/services/auth.service';
+import { ReportService } from '../../core/services/report.service';
+import { Analytics, ReportSummary } from '../../core/models/domain.model';
+import { ChartComponent } from '../../shared/chart/chart.component';
 
 interface StatCard {
   icon: string;
@@ -64,15 +67,57 @@ const ROLE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule],
+  imports: [CommonModule, RouterLink, MatIconModule, ChartComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
-export class DashboardComponent {
-  constructor(public authService: AuthService) {}
+export class DashboardComponent implements OnInit {
+  summary = signal<ReportSummary | null>(null);
+  analytics = signal<Analytics | null>(null);
+
+  constructor(public authService: AuthService, private reportService: ReportService) {}
+
+  ngOnInit(): void {
+    // Only these roles are allowed to call /api/reports/summary
+    if (this.authService.hasRole('admin', 'project_manager', 'client')) {
+      this.reportService.getSummary().subscribe({
+        next: (data) => this.summary.set(data),
+        error: () => this.summary.set(null),
+      });
+      this.reportService.getAnalytics().subscribe({
+        next: (data) => this.analytics.set(data),
+        error: () => this.analytics.set(null),
+      });
+    }
+  }
 
   stats = computed<StatCard[]>(() => {
     const role = this.authService.currentUser()?.role || 'worker';
+    const s = this.summary();
+
+    // Real, database-backed numbers for roles that can access the summary
+    if (s && role === 'admin') {
+      return [
+        { icon: 'business', label: 'Total projects', value: String(s.total_projects), note: `${s.active_projects} in progress`, accent: 'blue' },
+        { icon: 'groups', label: 'Workers registered', value: String(s.total_workers), note: 'Live from database', accent: 'teal' },
+        { icon: 'inventory_2', label: 'Low stock items', value: String(s.low_stock_items), note: 'At or below reorder level', accent: 'amber' },
+        { icon: 'shopping_cart', label: 'Pending procurement', value: String(s.pending_procurement_requests), note: 'Awaiting approval', accent: 'purple' },
+      ];
+    }
+    if (s && role === 'project_manager') {
+      return [
+        { icon: 'business', label: 'Projects', value: String(s.total_projects), note: `${s.active_projects} in progress`, accent: 'blue' },
+        { icon: 'account_balance_wallet', label: 'Total budget', value: '₹' + s.total_budget.toLocaleString('en-IN'), note: '₹' + s.total_spent.toLocaleString('en-IN') + ' spent so far', accent: 'purple' },
+        { icon: 'groups', label: 'Workforce', value: String(s.total_workers), note: `${s.present_attendance_records} attendance marked present`, accent: 'teal' },
+        { icon: 'shopping_cart', label: 'Pending procurement', value: String(s.pending_procurement_requests), note: 'Awaiting approval', accent: 'amber' },
+      ];
+    }
+    if (s && role === 'client') {
+      return [
+        { icon: 'business', label: 'Projects', value: String(s.total_projects), note: `${s.active_projects} in progress`, accent: 'blue' },
+        { icon: 'account_balance_wallet', label: 'Total budget', value: '₹' + s.total_budget.toLocaleString('en-IN'), note: 'Across all projects', accent: 'purple' },
+      ];
+    }
     return STATS_BY_ROLE[role] || STATS_BY_ROLE['worker'];
   });
 
@@ -81,20 +126,42 @@ export class DashboardComponent {
     return ROLE_LABELS[role] || role;
   });
 
-  /** Milestone 1 delivery checklist — what's actually done */
+  /** Delivery checklist across Milestones 1-3 */
   deliverables = [
-    { label: 'JWT authentication (signup, login, /me)', done: true },
-    { label: 'Password reset flow', done: true },
-    { label: 'Role-based access control (6 roles)', done: true },
-    { label: 'Database schema — all 10 tables', done: true },
-    { label: 'Angular skeleton + Material & Bootstrap', done: true },
-    { label: 'Backend test suite (10 pytest tests passing)', done: true },
+    { label: 'JWT authentication, password reset (emailed link) & 6-role access control', done: true },
+    { label: 'Projects, milestones with deadlines, resources & machinery', done: true },
+    { label: 'Workforce, attendance roster & absence alerts', done: true },
+    { label: 'Inventory with low-stock alerts, procurement approval workflow', done: true },
+    { label: 'Budget & expense tracking with 90% budget alerts', done: true },
+    { label: 'Document uploads, notifications, charts & PDF / Excel / CSV export', done: true },
   ];
 
   quickLinks: QuickLink[] = [
-    { path: '/projects', icon: 'business', label: 'Projects', desc: 'Project records & status' },
-    { path: '/workforce', icon: 'groups', label: 'Workforce', desc: 'Workers & attendance' },
-    { path: '/inventory', icon: 'inventory_2', label: 'Inventory', desc: 'Materials & stock' },
-    { path: '/reports', icon: 'summarize', label: 'Reports', desc: 'Progress & budget reports' },
+    { path: '/projects', icon: 'business', label: 'Projects', desc: 'Schedules, status & budgets' },
+    { path: '/workforce', icon: 'groups', label: 'Workforce', desc: 'Workers & daily attendance' },
+    { path: '/inventory', icon: 'inventory_2', label: 'Inventory', desc: 'Stock & low-stock alerts' },
+    { path: '/documents', icon: 'folder_open', label: 'Documents', desc: 'Drawings, permits, invoices' },
+    { path: '/notifications', icon: 'notifications', label: 'Notifications', desc: 'Alerts for your account' },
+    { path: '/reports', icon: 'summarize', label: 'Reports', desc: 'Charts and exports' },
   ];
+
+  keys(o: Record<string, number> | undefined): string[] {
+    return Object.keys(o ?? {});
+  }
+
+  one(label: string, o: Record<string, number> | undefined) {
+    return [{ label, data: Object.values(o ?? {}) }];
+  }
+
+  budgetLabels(): string[] {
+    return (this.analytics()?.budget_vs_spent ?? []).map((b) => b.project);
+  }
+
+  budgetSeries() {
+    const rows = this.analytics()?.budget_vs_spent ?? [];
+    return [
+      { label: 'Budget', data: rows.map((r) => r.budget) },
+      { label: 'Spent', data: rows.map((r) => r.spent) },
+    ];
+  }
 }
